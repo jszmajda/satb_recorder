@@ -329,17 +329,30 @@ This document outlines the implementation phases and tasks for building the SATB
 - Disabled states when no project/tracks loaded
 - Dark theme with color-coded buttons
 
-### 4.2 MetronomeControl Component
-- [ ] Write tests for BPM input (MET-003)
-- [ ] Implement BPM input (editable field)
-- [ ] Write tests for BPM buttons (MET-002)
-- [ ] Implement BPM increment/decrement buttons
-- [ ] Write tests for visual flash (MET-005)
-- [ ] Implement visual flash indicator box
-- [ ] Write tests for overdub toggle (OVER-001)
-- [ ] Implement overdub toggle switch
+### 4.2 MetronomeControl Component ✅
+- [x] Write tests for BPM input (MET-003)
+- [x] Implement BPM input (editable field)
+- [x] Write tests for BPM buttons (MET-002)
+- [x] Implement BPM increment/decrement buttons
+- [x] Write tests for visual flash (MET-005)
+- [x] Implement visual flash indicator box
+- [x] Write tests for overdub toggle (OVER-001)
+- [x] Implement overdub toggle switch
 
 **EARS Requirements:** MET-002, MET-003, MET-005, OVER-001
+
+**Test Coverage:** 25 tests in src/components/MetronomeControl.test.tsx
+
+**Completed:** 2025-11-14
+
+**Features:**
+- BPM input field (40-240 range with clamping)
+- Increment/decrement buttons (disabled at boundaries)
+- Visual flash indicator (red for beat 1, green for other beats)
+- Flash duration: 100ms
+- Overdub toggle checkbox
+- Integration with Metronome class for visual callbacks
+- Proper cleanup on component unmount
 
 ### 4.3 MicrophoneSelector Component
 - [ ] Write tests for device enumeration display (MIC-002)

@@ -155,6 +155,16 @@ beforeAll(() => {
         connect: vi.fn(),
         disconnect: vi.fn(),
       }),
+      createBuffer: vi.fn().mockImplementation((numberOfChannels: number, length: number, sampleRate: number) => {
+        const channelData = new Float32Array(length);
+        return {
+          duration: length / sampleRate,
+          length,
+          numberOfChannels,
+          sampleRate,
+          getChannelData: (channel: number) => channelData,
+        };
+      }),
       decodeAudioData: vi.fn().mockImplementation(async () => {
         // Generate mock audio data with some variation
         const length = 44100;
@@ -292,13 +302,24 @@ beforeAll(() => {
   class MockBlob {
     size: number;
     type: string;
+    private data: any[];
 
     constructor(parts?: any[], options?: { type?: string }) {
-      this.size = parts?.reduce((acc: number, part: any) => acc + (part?.length || 0), 0) || 0;
+      this.data = parts || [];
+      this.size = parts?.reduce((acc: number, part: any) => {
+        if (part instanceof ArrayBuffer) {
+          return acc + part.byteLength;
+        }
+        return acc + (part?.length || 0);
+      }, 0) || 0;
       this.type = options?.type || '';
     }
 
     async arrayBuffer(): Promise<ArrayBuffer> {
+      // If parts contain an ArrayBuffer, return it
+      if (this.data.length > 0 && this.data[0] instanceof ArrayBuffer) {
+        return this.data[0];
+      }
       // Return ArrayBuffer matching the blob size
       // If size is 0, return empty buffer; otherwise use size or default to 1024
       return new ArrayBuffer(this.size > 0 ? this.size : (this.size === 0 ? 0 : 1024));

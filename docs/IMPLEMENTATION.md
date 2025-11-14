@@ -689,15 +689,49 @@ This document outlines the implementation phases and tasks for building the SATB
 
 ## Phase 7: Integration - Export & Project Management
 
-### 7.1 Export Integration
-- [ ] Write integration tests for WAV export (EXP-001, EXP-002, EXP-003)
-- [ ] Integrate WAV export with mixer and downloader
-- [ ] Write integration tests for MP3 export (EXP-004, EXP-005, EXP-006)
-- [ ] Integrate MP3 export with lamejs and downloader
-- [ ] Write tests for export dropdown (EXP-007)
-- [ ] Integrate export dropdown UI
+### 7.1 Export Integration ✅
+- [x] Write integration tests for WAV export (EXP-001, EXP-002, EXP-003)
+- [x] Verify WAV export integrates Exporter with TopBar correctly
+- [x] Write integration tests for MP3 export (EXP-004, EXP-005, EXP-006)
+- [x] Verify MP3 export integrates Exporter with TopBar correctly
+- [x] Write integration tests for export dropdown (EXP-007)
+- [x] Verify export dropdown UI integration
 
 **EARS Requirements:** EXP-001, EXP-002, EXP-003, EXP-004, EXP-005, EXP-006, EXP-007
+
+**Integration Already Implemented:**
+- The TopBar component (Phase 4.7) already integrates Exporter (Phase 3.4) with the UI
+- TopBar creates AudioContext → Exporter → calls downloadWAV/downloadMP3
+- Converts store tracks to ExportTrack format with volume/mute/solo state
+- Properly cleans up AudioContext and Exporter after export
+
+**Integration Tests:** 15 tests (all passing ✅)
+- **WAV Export Integration** (7 tests):
+  - EXP-001: Verify all tracks passed with correct volume levels
+  - EXP-001: Verify muted status included in export
+  - EXP-002: Verify Exporter created with AudioContext
+  - EXP-003: Verify download triggered with correct project name
+  - Edge cases: Single track, all tracks muted
+  - Verify dropdown closes after export completion
+
+- **MP3 Export Integration** (7 tests):
+  - EXP-004: Verify all tracks passed with correct volume levels
+  - EXP-004: Verify soloed status included in export
+  - EXP-005: Verify Exporter created with AudioContext
+  - EXP-006: Verify download triggered with correct project name
+  - Edge cases: Project name with special characters
+  - Verify dropdown closes after export completion
+
+- **Export Dropdown UI** (1 test):
+  - EXP-007: Verify dropdown provides both WAV and MP3 options
+
+**Test Status:** All 15 integration tests green ✅
+**Total Tests:** 623 tests (all passing ✅)
+
+**Files:**
+- `src/components/ExportIntegration.test.tsx` - Integration tests
+- `src/components/TopBar.tsx` - Export integration component (no changes needed)
+- `src/audio/exporter.ts` - Exporter class (no changes needed)
 
 ### 7.2 Project Management Integration
 - [ ] Write integration tests for new project flow (PROJ-001 through PROJ-004)

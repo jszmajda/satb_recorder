@@ -378,16 +378,30 @@ This document outlines the implementation phases and tasks for building the SATB
 - Selected device state management
 - Proper cleanup on component unmount
 
-### 4.4 ToneGenerator Component
-- [ ] Write tests for tone generator UI (TONE-003, TONE-006)
-- [ ] Implement 12 tone buttons (C, C#, D, D#, E, F, F#, G, G#, A, A#, B)
-- [ ] Write tests for tone playback (TONE-004)
-- [ ] Implement play tone on button press
-- [ ] Write tests for tone stop (TONE-005)
-- [ ] Implement stop tone on release or second click
-- [ ] Optional: Implement piano key visual styling
+### 4.4 ToneGenerator Component ✅
+- [x] Write tests for tone generator UI (TONE-003, TONE-006)
+- [x] Implement 12 tone buttons (C, C#, D, D#, E, F, F#, G, G#, A, A#, B)
+- [x] Write tests for tone playback (TONE-004)
+- [x] Implement play tone on button press
+- [x] Write tests for tone stop (TONE-005)
+- [x] Implement stop tone on release or second click
+- [x] Optional: Implement piano key visual styling
 
 **EARS Requirements:** TONE-003, TONE-004, TONE-005, TONE-006
+
+**Test Coverage:** 14 tests in src/components/ToneGenerator.test.tsx
+
+**Completed:** 2025-11-14
+
+**Features:**
+- 12 tone buttons in chromatic order (C, C#, D, D#, E, F, F#, G, G#, A, A#, B)
+- Click to play tone (C4-B4 range)
+- Click again to stop tone
+- Automatic stop when switching to different tone
+- Active state visual feedback
+- Black key styling (darker background)
+- Hover effects for better UX
+- Proper cleanup on component unmount
 
 ### 4.5 TransportControl Component
 - [ ] Write tests for Play button (PLAY-001)

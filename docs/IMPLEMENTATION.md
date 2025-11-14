@@ -460,22 +460,35 @@ This document outlines the implementation phases and tasks for building the SATB
 - Hover effects for Add Track button
 
 ### 4.7 TrackRow Component
-- [ ] Write tests for track controls layout (TRACK-011)
-- [ ] Implement layout: [Delete] [Name] [Solo] [Mute] [Volume] [Sparkline]
-- [ ] Write tests for Delete button (TRACK-001, TRACK-002)
-- [ ] Implement Delete button
-- [ ] Write tests for track name editing (TRACK-010)
-- [ ] Implement inline track name editing
-- [ ] Write tests for Solo button (TRACK-005)
-- [ ] Implement Solo toggle button
-- [ ] Write tests for Mute button (TRACK-006)
-- [ ] Implement Mute toggle button
-- [ ] Write tests for volume slider (TRACK-008, TRACK-009)
-- [ ] Implement volume slider (0-100, preserves on mute)
-- [ ] Write tests for grayed out when muted
-- [ ] Implement grayed out styling for muted tracks
+- [x] Write tests for track controls layout (TRACK-011)
+- [x] Implement layout: [Delete] [Name] [Solo] [Mute] [Volume] [Sparkline]
+- [x] Write tests for Delete button (TRACK-001, TRACK-002)
+- [x] Implement Delete button
+- [x] Write tests for track name editing (TRACK-010)
+- [x] Implement inline track name editing
+- [x] Write tests for Solo button (TRACK-005)
+- [x] Implement Solo toggle button
+- [x] Write tests for Mute button (TRACK-006)
+- [x] Implement Mute toggle button
+- [x] Write tests for volume slider (TRACK-008, TRACK-009)
+- [x] Implement volume slider (0-100, preserves on mute)
+- [x] Write tests for grayed out when muted
+- [x] Implement grayed out styling for muted tracks
 
 **EARS Requirements:** TRACK-001, TRACK-002, TRACK-005, TRACK-006, TRACK-008, TRACK-009, TRACK-010, TRACK-011
+
+**Tests:** 28 tests
+- TRACK-011 tests (6): Layout and all controls rendering
+- TRACK-001, TRACK-002 tests (2): Delete button with correct track ID
+- TRACK-010 tests (2): Track name inline editing
+- TRACK-005 tests (3): Solo button toggle with active state
+- TRACK-006 tests (3): Mute button toggle with active state
+- TRACK-008, TRACK-009 tests (7): Volume slider (0-100 range, grayed when muted)
+- Optional callbacks tests (5): Component works without callbacks
+
+**Files:**
+- `src/components/TrackRow.tsx` - Track controls component
+- `src/components/TrackRow.test.tsx` - 28 comprehensive tests
 
 ### 4.8 Waveform Component
 - [ ] Write tests for sparkline rendering (VIS-002)

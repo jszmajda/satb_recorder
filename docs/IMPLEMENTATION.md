@@ -491,18 +491,47 @@ This document outlines the implementation phases and tasks for building the SATB
 - `src/components/TrackRow.test.tsx` - 28 comprehensive tests
 
 ### 4.8 Waveform Component
-- [ ] Write tests for sparkline rendering (VIS-002)
-- [ ] Implement sparkline canvas/SVG rendering
-- [ ] Write tests for playhead indicator (VIS-004, SEEK-004)
-- [ ] Implement playhead vertical line
-- [ ] Write tests for click-to-seek (SEEK-001)
-- [ ] Implement click-to-seek functionality
-- [ ] Write tests for drag-to-seek (SEEK-002)
-- [ ] Implement drag playhead functionality
-- [ ] Write tests for seek during playback (SEEK-003)
-- [ ] Implement continue playing from new position
+- [x] Write tests for sparkline rendering (VIS-002)
+- [x] Implement sparkline canvas/SVG rendering
+- [x] Write tests for playhead indicator (VIS-004, SEEK-004)
+- [x] Implement playhead vertical line
+- [x] Write tests for click-to-seek (SEEK-001)
+- [x] Implement click-to-seek functionality
+- [x] Write tests for drag-to-seek (SEEK-002)
+- [x] Implement drag playhead functionality
+- [x] Write tests for seek during playback (SEEK-003)
+- [x] Implement continue playing from new position
 
 **EARS Requirements:** VIS-002, VIS-004, SEEK-001, SEEK-002, SEEK-003, SEEK-004
+
+**Tests:** 30 tests
+- VIS-002: Sparkline rendering (7 tests)
+  - Canvas renders with correct dimensions
+  - Handles empty data, single data point, data updates
+- VIS-004, SEEK-004: Playhead indicator (7 tests)
+  - Renders playhead at correct position
+  - Updates position based on currentTime/duration ratio
+  - Handles zero duration edge case
+- SEEK-001: Click-to-seek (5 tests)
+  - Calls onSeek with correct time on canvas click
+  - Handles canvas offset correctly
+  - Clamps to valid range
+- SEEK-002: Drag-to-seek (5 tests)
+  - Dragging playhead updates position
+  - Stops dragging on mouse up
+  - Works across entire waveform
+  - Clamps to valid range
+- SEEK-003: Seek during playback (3 tests)
+  - Allows seeking while playing
+  - Playhead updates after seek
+  - Drag works while playing
+- Component integration (3 tests)
+  - Works without optional props
+  - Container is interactive
+
+**Files:**
+- `src/components/Waveform.tsx` - Waveform visualization with seek
+- `src/components/Waveform.test.tsx` - 30 comprehensive tests
 
 ### 4.9 VUMeter Component
 - [ ] Write tests for VU meter display (MIC-005, REC-004)

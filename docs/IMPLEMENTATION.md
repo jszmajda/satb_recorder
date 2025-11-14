@@ -354,14 +354,29 @@ This document outlines the implementation phases and tasks for building the SATB
 - Integration with Metronome class for visual callbacks
 - Proper cleanup on component unmount
 
-### 4.3 MicrophoneSelector Component
-- [ ] Write tests for device enumeration display (MIC-002)
-- [ ] Implement microphone dropdown
-- [ ] Write tests for device selection (MIC-003)
-- [ ] Implement device selection handling
-- [ ] Implement selected device persistence
+### 4.3 MicrophoneSelector Component ✅
+- [x] Write tests for device enumeration display (MIC-002)
+- [x] Implement microphone dropdown
+- [x] Write tests for device selection (MIC-003)
+- [x] Implement device selection handling
+- [x] Implement selected device persistence
 
 **EARS Requirements:** MIC-002, MIC-003
+
+**Test Coverage:** 18 tests in src/components/MicrophoneSelector.test.tsx
+
+**Completed:** 2025-11-14
+
+**Features:**
+- Microphone device enumeration on mount
+- Dropdown selector with device labels
+- Device selection with Recorder integration
+- Refresh button to re-enumerate devices
+- Loading state during enumeration
+- Error handling for enumeration failures
+- Empty device list handling
+- Selected device state management
+- Proper cleanup on component unmount
 
 ### 4.4 ToneGenerator Component
 - [ ] Write tests for tone generator UI (TONE-003, TONE-006)

@@ -831,13 +831,75 @@ This document outlines the implementation phases and tasks for building the SATB
 
 **EARS Requirements:** TRACK-003
 
-### 8.2 Error Handling
-- [ ] Write tests for microphone permission denied (ERR-001)
-- [ ] Implement user-friendly error message display
-- [ ] Write tests for storage quota exceeded (ERR-002)
-- [ ] Implement storage quota error handling
-- [ ] Write tests for audio encoding failure (ERR-003)
-- [ ] Implement encoding error handling
+### 8.2 Error Handling ✅
+- [x] Write tests for microphone permission denied (ERR-001)
+- [x] Implement user-friendly error message display
+- [x] Write tests for storage quota exceeded (ERR-002)
+- [x] Implement storage quota error handling
+- [x] Write tests for audio encoding failure (ERR-003)
+- [x] Implement encoding error handling
+
+**Implementation:**
+- Created `src/components/ErrorNotification.tsx` - Global error notification component
+  - Fixed position at top of screen with red error styling
+  - Displays error message with warning icon
+  - Click to dismiss functionality
+  - Smooth slide-down animation
+  - Accessible with role="alert" for screen readers
+
+- Created `src/components/ErrorNotification.test.tsx` - 14 comprehensive tests
+  - Display behavior: Renders/hides based on error state (2 tests)
+  - Dismiss behavior: Click to dismiss (2 tests)
+  - Error types: ERR-001, ERR-002, ERR-003 specific messages (3 tests)
+  - Styling: Position and colors (2 tests)
+  - Accessibility: ARIA roles and labels (3 tests)
+
+- Created `src/store/useErrorStore.ts` - Global error state management
+  - Simple Zustand store with error state (string | null)
+  - setError(error): Set error message
+  - clearError(): Clear current error
+  - Used by all components to display errors globally
+
+- Created `src/store/useErrorStore.test.ts` - 12 comprehensive tests
+  - Initial state tests (1 test)
+  - setError tests (3 tests)
+  - clearError tests (3 tests)
+  - EARS error scenarios: ERR-001, ERR-002, ERR-003 (4 tests)
+  - Error flow tests (1 test)
+
+- Enhanced `src/App.tsx`
+  - Integrated ErrorNotification component at app root
+  - Subscribes to global error store
+  - Provides dismiss callback
+
+- Enhanced `src/components/RecordButton.tsx`
+  - Added ERR-001: Microphone permission denied error handling
+    - Catches errors from requestPermission()
+    - Sets global error: "Microphone permission denied. Please allow access to record."
+  - Added ERR-003: Recording/encoding failure error handling
+    - Wraps stopRecording() in try-catch
+    - Sets global error: "Recording failed. Please try again."
+  - Removed local error message display (now global)
+  - Updated 2 existing tests to work with global error system
+
+- Enhanced `src/db/projects.ts`
+  - Added ERR-002: Storage quota exceeded error handling
+    - Wraps createProject() db.projects.add() in try-catch
+    - Wraps updateProject() db.projects.put() in try-catch
+    - Catches QuotaExceededError specifically
+    - Sets global error: "Storage quota exceeded. Please delete some projects or tracks."
+
+- Enhanced `src/db/tracks.ts`
+  - Added ERR-002: Storage quota exceeded error handling
+    - Wraps addTrackToProject() db.tracks.add() in try-catch
+    - Wraps updateTrack() db.tracks.put() in try-catch
+    - Catches QuotaExceededError specifically
+    - Sets global error: "Storage quota exceeded. Please delete some projects or tracks."
+
+**Test Results:** All tests passing (655 previous + 26 new = 681 tests)
+- 14 ErrorNotification tests
+- 12 useErrorStore tests
+- Updated 2 RecordButton tests to work with global errors
 
 **EARS Requirements:** ERR-001, ERR-002, ERR-003
 

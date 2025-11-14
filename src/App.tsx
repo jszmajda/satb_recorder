@@ -3,12 +3,18 @@ import { MetronomeControl } from './components/MetronomeControl';
 import { MicrophoneSelector } from './components/MicrophoneSelector';
 import { ToneGenerator } from './components/ToneGenerator';
 import { TransportControl } from './components/TransportControl';
+import { ErrorNotification } from './components/ErrorNotification';
 import { useProjectStore } from './store/useProjectStore';
+import { useErrorStore } from './store/useErrorStore';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 
 function App() {
   const currentProject = useProjectStore((state) => state.currentProject);
   const restoreLastDeletedTrack = useProjectStore((state) => state.restoreLastDeletedTrack);
+
+  // Error handling [EARS: ERR-001, ERR-002, ERR-003]
+  const error = useErrorStore((state) => state.error);
+  const clearError = useErrorStore((state) => state.clearError);
 
   /**
    * Keyboard shortcut: Ctrl+Z/Cmd+Z for undo delete
@@ -27,6 +33,9 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
+      {/* Global Error Notification [EARS: ERR-001, ERR-002, ERR-003] */}
+      <ErrorNotification error={error} onDismiss={clearError} />
+
       <TopBar />
       <div className="p-8">
         <div className="max-w-7xl mx-auto space-y-6">

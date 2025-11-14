@@ -1,7 +1,8 @@
-// [EARS: PROJ-001, PROJ-002, PROJ-005, PROJ-006, PROJ-008] Project CRUD operations
+// [EARS: PROJ-001, PROJ-002, PROJ-005, PROJ-006, PROJ-008, ERR-002] Project CRUD operations
 
 import { db } from './index';
 import type { Project, VoicePart } from '@/store/types';
+import { useErrorStore } from '@/store/useErrorStore';
 
 /**
  * Generate a unique ID for projects
@@ -53,8 +54,17 @@ export async function createProject(name: string): Promise<string> {
     voiceParts: initializeVoiceParts(), // [EARS: PROJ-002]
   };
 
-  await db.projects.add(project);
-  return project.id;
+  try {
+    await db.projects.add(project);
+    return project.id;
+  } catch (error) {
+    // [EARS: ERR-002] Handle storage quota exceeded
+    if (error instanceof Error && error.name === 'QuotaExceededError') {
+      useErrorStore.getState().setError('Storage quota exceeded. Please delete some projects or tracks.');
+      throw new Error('Storage quota exceeded');
+    }
+    throw error;
+  }
 }
 
 /**
@@ -113,7 +123,16 @@ export async function updateProject(
     updatedAt: new Date(), // [EARS: PROJ-005] Update timestamp on every change
   };
 
-  await db.projects.put(updatedProject);
+  try {
+    await db.projects.put(updatedProject);
+  } catch (error) {
+    // [EARS: ERR-002] Handle storage quota exceeded
+    if (error instanceof Error && error.name === 'QuotaExceededError') {
+      useErrorStore.getState().setError('Storage quota exceeded. Please delete some projects or tracks.');
+      throw new Error('Storage quota exceeded');
+    }
+    throw error;
+  }
 }
 
 /**

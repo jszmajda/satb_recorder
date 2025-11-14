@@ -1,8 +1,9 @@
-// [EARS: REC-009, REC-010, TRACK-001, TRACK-006, TRACK-008] Track CRUD operations
+// [EARS: REC-009, REC-010, TRACK-001, TRACK-006, TRACK-008, ERR-002] Track CRUD operations
 
 import { db } from './index';
 import { getProject, updateProject } from './projects';
 import type { Track, VoicePartType } from '@/store/types';
+import { useErrorStore } from '@/store/useErrorStore';
 
 /**
  * Generate a unique ID for tracks
@@ -92,23 +93,32 @@ export async function addTrackToProject(
     createdAt: new Date(),
   };
 
-  // Store track in IndexedDB tracks table
-  await db.tracks.add(track);
+  try {
+    // Store track in IndexedDB tracks table
+    await db.tracks.add(track);
 
-  // Add track reference to project voice part
-  const updatedVoiceParts = project.voiceParts.map(vp => {
-    if (vp.type === voicePartType) {
-      return {
-        ...vp,
-        tracks: [...vp.tracks, track],
-      };
+    // Add track reference to project voice part
+    const updatedVoiceParts = project.voiceParts.map(vp => {
+      if (vp.type === voicePartType) {
+        return {
+          ...vp,
+          tracks: [...vp.tracks, track],
+        };
+      }
+      return vp;
+    });
+
+    await updateProject(projectId, { voiceParts: updatedVoiceParts });
+
+    return track.id;
+  } catch (error) {
+    // [EARS: ERR-002] Handle storage quota exceeded
+    if (error instanceof Error && error.name === 'QuotaExceededError') {
+      useErrorStore.getState().setError('Storage quota exceeded. Please delete some projects or tracks.');
+      throw new Error('Storage quota exceeded');
     }
-    return vp;
-  });
-
-  await updateProject(projectId, { voiceParts: updatedVoiceParts });
-
-  return track.id;
+    throw error;
+  }
 }
 
 /**
@@ -174,28 +184,37 @@ export async function updateTrack(
     ...updates,
   };
 
-  await db.tracks.put(updatedTrack);
+  try {
+    await db.tracks.put(updatedTrack);
 
-  // Also update the track in the project's voice part
-  // Find which project contains this track
-  const allProjects = await db.projects.toArray();
-  for (const project of allProjects) {
-    let trackFound = false;
-    const updatedVoiceParts = project.voiceParts.map(vp => {
-      const trackIndex = vp.tracks.findIndex(t => t.id === id);
-      if (trackIndex !== -1) {
-        trackFound = true;
-        const updatedTracks = [...vp.tracks];
-        updatedTracks[trackIndex] = updatedTrack;
-        return { ...vp, tracks: updatedTracks };
+    // Also update the track in the project's voice part
+    // Find which project contains this track
+    const allProjects = await db.projects.toArray();
+    for (const project of allProjects) {
+      let trackFound = false;
+      const updatedVoiceParts = project.voiceParts.map(vp => {
+        const trackIndex = vp.tracks.findIndex(t => t.id === id);
+        if (trackIndex !== -1) {
+          trackFound = true;
+          const updatedTracks = [...vp.tracks];
+          updatedTracks[trackIndex] = updatedTrack;
+          return { ...vp, tracks: updatedTracks };
+        }
+        return vp;
+      });
+
+      if (trackFound) {
+        await updateProject(project.id, { voiceParts: updatedVoiceParts });
+        break;
       }
-      return vp;
-    });
-
-    if (trackFound) {
-      await updateProject(project.id, { voiceParts: updatedVoiceParts });
-      break;
     }
+  } catch (error) {
+    // [EARS: ERR-002] Handle storage quota exceeded
+    if (error instanceof Error && error.name === 'QuotaExceededError') {
+      useErrorStore.getState().setError('Storage quota exceeded. Please delete some projects or tracks.');
+      throw new Error('Storage quota exceeded');
+    }
+    throw error;
   }
 }
 

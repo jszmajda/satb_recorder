@@ -6,6 +6,7 @@ import { Recorder } from '../audio/recorder';
 import { Metronome } from '../audio/metronome';
 import { VUMeter as VUMeterClass } from '../audio/vuMeter';
 import { VUMeter } from './VUMeter';
+import { useErrorStore } from '../store/useErrorStore';
 
 export interface RecordButtonProps {
   voicePartId: string;
@@ -27,9 +28,11 @@ export function RecordButton({
   onRecordingComplete,
 }: RecordButtonProps) {
   const [recordingState, setRecordingState] = useState<RecordingState>('idle');
-  const [errorMessage, setErrorMessage] = useState<string>('');
   const [countdownValue, setCountdownValue] = useState(COUNTDOWN_DURATION);
   const [vuLevel, setVuLevel] = useState(0);
+
+  // Global error handling [EARS: ERR-001, ERR-003]
+  const setError = useErrorStore((state) => state.setError);
 
   const recorderRef = useRef<Recorder | null>(null);
   const metronomeRef = useRef<Metronome | null>(null);
@@ -77,7 +80,7 @@ export function RecordButton({
    */
   const handleRecordClick = async () => {
     setRecordingState('requesting-permission');
-    setErrorMessage('');
+    setError(null); // Clear any previous errors
 
     try {
       // Request microphone permission
@@ -91,9 +94,9 @@ export function RecordButton({
       // [EARS: REC-002] Display countdown
       startCountdown();
     } catch (error) {
-      // [EARS: MIC-004] Display error on permission denied
+      // [EARS: ERR-001] Display error on permission denied
       setRecordingState('error');
-      setErrorMessage('Microphone permission denied. Please allow access to record.');
+      setError('Microphone permission denied. Please allow access to record.');
     }
   };
 
@@ -172,14 +175,20 @@ export function RecordButton({
       metronomeRef.current.stop();
     }
 
-    // [EARS: REC-007] Stop recording and get WAV blob
-    const result = await recorderRef.current.stopRecording();
+    try {
+      // [EARS: REC-007] Stop recording and get WAV blob
+      const result = await recorderRef.current.stopRecording();
 
-    setRecordingState('idle');
-    setVuLevel(0);
+      setRecordingState('idle');
+      setVuLevel(0);
 
-    // Notify parent component
-    onRecordingComplete(result);
+      // Notify parent component
+      onRecordingComplete(result);
+    } catch (error) {
+      // [EARS: ERR-003] Display error on encoding failure
+      setRecordingState('error');
+      setError('Recording failed. Please try again.');
+    }
   };
 
   return (
@@ -192,21 +201,6 @@ export function RecordButton({
         gap: '1rem',
       }}
     >
-      {/* Error Message */}
-      {recordingState === 'error' && (
-        <div
-          style={{
-            padding: '0.5rem 1rem',
-            backgroundColor: '#f44336',
-            color: '#fff',
-            borderRadius: '4px',
-            fontSize: '0.9rem',
-          }}
-        >
-          {errorMessage}
-        </div>
-      )}
-
       {/* Countdown Display */}
       {/* [EARS: REC-002] Countdown display */}
       {recordingState === 'countdown' && (

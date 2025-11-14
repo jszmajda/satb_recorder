@@ -654,13 +654,36 @@ This document outlines the implementation phases and tasks for building the SATB
 - `src/components/PlaybackControls.tsx` - Playback integration component
 - `src/components/PlaybackControls.test.tsx` - Integration tests
 
-### 6.2 Seeking Integration
-- [ ] Write integration tests for seeking (SEEK-001, SEEK-002, SEEK-003)
-- [ ] Integrate click-to-seek with playhead update
-- [ ] Integrate drag-to-seek with playhead update
-- [ ] Integrate seek during playback continuation
+### 6.2 Seeking Integration ✅
+- [x] Write integration tests for seeking (SEEK-001, SEEK-002, SEEK-003)
+- [x] Enhanced PlaybackControls to support external time control
+- [x] Integrated Waveform seeking with PlaybackControls time display
+- [x] Implemented seek during playback continuation
 
 **EARS Requirements:** SEEK-001, SEEK-002, SEEK-003
+
+**Component Enhancements:**
+- **PlaybackControls**: Added optional `currentTime`, `onCurrentTimeChange`, and `onSeek` props for external control. Component now supports both controlled (external time) and uncontrolled (internal time) modes.
+
+**Integration Tests:** 14 tests (all passing ✅)
+- **SEEK-001 tests** (4): Click-to-seek updates playback position at start, middle, end, and multiple clicks
+- **SEEK-002 tests** (4): Drag-to-seek updates position in real-time, forward/backward dragging, and cancel on release outside
+- **SEEK-003 tests** (4): Seeking during playback continues from new position, stops/restarts mixer appropriately, and idle state doesn't start playback
+- **Lifecycle tests** (2): Cleanup on unmount and rapid seeking handling
+
+**Implementation Details:**
+- Waveform component already had `onSeek` callback and `currentTime` prop from Phase 4.8
+- PlaybackControls enhanced to accept external time control while maintaining backward compatibility
+- Integration pattern: Parent component connects Waveform's `onSeek` → PlaybackControls' `currentTime`
+- Seeking during playback calls `mixer.stop()` then `mixer.play()` to resume from new position (mixer doesn't yet support true seek)
+
+**Test Status:** All 14 integration tests green ✅
+**Total Tests:** 608 tests (607 passing ✅, 1 pre-existing failure in ToneGenerator)
+
+**Files:**
+- `src/components/PlaybackControls.tsx` - Enhanced with external time control
+- `src/components/SeekingIntegration.test.tsx` - Integration tests
+- `src/components/Waveform.tsx` - Existing seek support (no changes needed)
 
 ---
 

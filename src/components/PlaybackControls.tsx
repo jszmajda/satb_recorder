@@ -6,6 +6,20 @@ import { Mixer } from '../audio/mixer';
 
 export interface PlaybackControlsProps {
   totalDuration?: number;
+  /**
+   * Optional external control of current time
+   * If provided, component acts as controlled component for time
+   */
+  currentTime?: number;
+  /**
+   * Callback when current time changes (for controlled components)
+   */
+  onCurrentTimeChange?: (time: number) => void;
+  /**
+   * Callback when user seeks to a specific time
+   * [EARS: SEEK-001, SEEK-002, SEEK-003]
+   */
+  onSeek?: (time: number) => void;
 }
 
 type PlayState = 'stopped' | 'playing' | 'paused';
@@ -25,9 +39,15 @@ function formatTime(seconds: number): string {
  */
 export function PlaybackControls({
   totalDuration = 0,
+  currentTime: externalCurrentTime,
+  onCurrentTimeChange,
+  onSeek,
 }: PlaybackControlsProps) {
   const [playState, setPlayState] = useState<PlayState>('stopped');
-  const [currentTime, setCurrentTime] = useState(0);
+  const [internalCurrentTime, setInternalCurrentTime] = useState(0);
+
+  // Use external currentTime if provided, otherwise use internal state
+  const currentTime = externalCurrentTime !== undefined ? externalCurrentTime : internalCurrentTime;
 
   const mixerRef = useRef<Mixer | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -113,7 +133,18 @@ export function PlaybackControls({
 
     mixerRef.current.stop();
     setPlayState('stopped');
-    setCurrentTime(0);
+
+    // Reset time to 0
+    if (externalCurrentTime !== undefined && onCurrentTimeChange) {
+      onCurrentTimeChange(0);
+    } else {
+      setInternalCurrentTime(0);
+    }
+
+    // Also call onSeek if provided
+    if (onSeek) {
+      onSeek(0);
+    }
   };
 
   /**
@@ -136,7 +167,13 @@ export function PlaybackControls({
     if (playState === 'playing') {
       // Update time every 100ms for smooth display
       intervalRef.current = window.setInterval(() => {
-        setCurrentTime((prev) => Math.min(prev + 0.1, totalDuration));
+        const newTime = Math.min(currentTime + 0.1, totalDuration);
+
+        if (externalCurrentTime !== undefined && onCurrentTimeChange) {
+          onCurrentTimeChange(newTime);
+        } else {
+          setInternalCurrentTime(newTime);
+        }
       }, 100);
     } else {
       // Clear interval when paused or stopped
@@ -151,7 +188,7 @@ export function PlaybackControls({
         clearInterval(intervalRef.current);
       }
     };
-  }, [playState, totalDuration]);
+  }, [playState, totalDuration, currentTime, externalCurrentTime, onCurrentTimeChange]);
 
   return (
     <div

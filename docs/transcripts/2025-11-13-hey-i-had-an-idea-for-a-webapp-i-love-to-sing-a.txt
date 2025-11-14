@@ -1,0 +1,1714 @@
+
+╭─── Claude Code v2.0.37 ───────────────────────────────────────────────────────────────────────────────────╮
+│                              │ Tips for getting started                                                   │
+│      Welcome back Jess!      │ ✔ Run /init to create a CLAUDE.md file with instructions for Claude        │
+│                              │ ───────────────────────────────────────────────────────────────────        │
+│            ▐▛███▜▌           │ Recent activity                                                            │
+│           ▝▜█████▛▘          │ No recent activity                                                         │
+│             ▘▘ ▝▝            │                                                                            │
+│                              │                                                                            │
+│   Sonnet 4.5 · Claude Max    │                                                                            │
+│   /Users/jess/src/recorder   │                                                                            │
+╰───────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+> Hey! I had an idea for a webapp. I love to sing, and my range is pretty broad, so I'd like to record 
+myself singing 4 part harmony (SATB). I want to be able to record multiple tracks for each voice, and 
+then to multiplex them all together to listen and re-record certain tracks, adjust the volume of certain 
+tracks relative to the others, and then eventually downmix the tracks into a resulting compressed audio 
+file. I think I can build all this as a single page app that runs in the browser locally, although I 
+might have to use a local webserver to deal with some browser security issues? 
+
+The layout I'm thinking for the app is something like this?
+
+ New | Save | Load | Export
+
+ Metronome: (-) 120 (+) [ visual flash tick indicator ]
+
+ Tracks:
+  
+  (playhead:)         v
+  S1 --------/----\----/-/----//----\-\\\\(sparkline)
+  S2 --------/----\----/-/----//----\-\\\\(sparkline)
+  S3 --------/----\----/-/----//----\-\\\\(sparkline)
+  S4 --------/----\----/-/----//----\-\\\\(sparkline)
+  (+)
+
+  A1 --------/----\----/-/----//----\-\\\\(sparkline)
+  A2 --------/----\----/-/----//----\-\\\\(sparkline)
+  A3 --------/----\----/-/----//----\-\\\\(sparkline)
+  (+)
+
+  T1 --------/----\----/-/----//----\-\\\\(sparkline)
+  T2 --------/----\----/-/----//----\-\\\\(sparkline)
+  (+)
+
+  B1 --------/----\----/-/----//----\-\\\\(sparkline)
+  B2 --------/----\----/-/----//----\-\\\\(sparkline)
+  B3 --------/----\----/-/----//----\-\\\\(sparkline)
+  B4 --------/----\----/-/----//----\-\\\\(sparkline)
+  (+)
+
+
+
+What do you think? Is this doable with a local React app? 
+
+⏺ This is absolutely doable as a local React app! This is a really cool project. The browser's Web Audio
+  API gives you everything you need for recording, playback, mixing, and export.
+
+  Here's what's great about your plan:
+
+  Technically Feasible:
+  - Recording: MediaRecorder API can capture microphone input
+  - Playback & Mixing: AudioContext and GainNode for volume control per track
+  - Visualization: AnalyserNode for waveform sparklines
+  - Metronome: Easy with Web Audio API's precise timing
+  - Export: You can mix down all tracks and export as WAV/MP3
+  - Storage: Save/Load projects using IndexedDB or localStorage (for smaller projects)
+
+  Local Server:
+  You'll want a dev server (which React gives you automatically with Vite/CRA) because:
+  - Microphone access requires HTTPS or localhost
+  - Makes development much easier
+
+  Some questions to help me understand your vision better:
+
+  1. Recording workflow: When recording a new track, do you want to hear the existing tracks playing back
+   (with metronome)? This is typical for overdubbing.
+  2. Track controls: For each track, do you want:
+    - Solo/Mute buttons?
+    - Individual volume sliders?
+    - Re-record button?
+    - Delete button?
+  3. Waveform interaction: Should clicking on the sparkline set the playhead position?
+  4. Export format: MP3, WAV, or both?
+  5. Tech stack preference: Plain React, or are you open to using audio libraries like Tone.js (makes
+  audio programming much easier)?
+
+  Want me to start building a basic version to demonstrate the core functionality?
+
+> Great questions! 
+
+1. I'd like the option of overdubbing or just singing to the metronome. The metronome should be visual or
+ audible, but visual would be the priority. I don't often use wired headphones these days so it's hard to
+ overdub when I'm on the road.. but sometimes I'd like the option.
+
+2. yes those buttons are perfect, but I don't need re-record (I'd just delete and record a new track). 
+Probably the row is (del) (trackname) (solo) (mute) (horiz volume slider) (sparkline visualizer)
+
+3. Yes, I'd like to be able to est the playhead position. I could also choose to record a new track only 
+from the playhead position.. but that's a very secondary use-case.
+
+4. both!
+
+5. I'm down with whatever you'd recommend. Would we use something like next.js or vite also?
+
+Let's make a plan and, when we're aligned, write a design doc for the project first that details our 
+choices. 
+
+⏺ Great! Let me put together a plan for this. I'm thinking through the architecture and technical
+  choices.
+
+  My Recommendations:
+
+  Tech Stack:
+  - Vite + React - Perfect for a pure client-side app. Much faster than Next.js and we don't need SSR
+  - Tone.js - Amazing for metronome, transport (playhead), and precise timing. We can still use raw Web
+  Audio API where needed
+  - Zustand - Lightweight state management (better than Context for complex audio state)
+  - Tailwind CSS - Fast styling, easy to make clean UI
+  - IndexedDB (via Dexie.js) - For storing audio blobs (localStorage is too small)
+  - lamejs - For MP3 encoding in the browser
+
+  Architecture Approach:
+  - Separation of concerns: Audio engine (Tone.js/Web Audio) separate from React UI
+  - Modular design: Recording, playback, mixing, export as separate modules
+  - Project structure: Store project metadata + audio blob references
+
+  Key Design Decisions to Align On:
+
+  1. Audio format: Store tracks as uncompressed WAV in IndexedDB (for quality), only compress on export?
+  2. Metronome visual: Thinking a pulsing circle/square that changes color on beat 1? Or something else?
+  3. Track grouping: Should SATB groups be collapsible/expandable in the UI?
+  4. Max tracks: Any limit per voice part? (helps with UI planning)
+  5. Undo/Redo: Want this for delete operations?
+
+  Let me create a TodoList for this planning phase:
+
+⏺ What do you think about those questions? Once we align on these details, I'll write a comprehensive
+  design doc covering:
+
+  - Architecture overview
+  - Technology choices & rationale
+  - Data models (project/track structure)
+  - Core features & workflows
+  - UI/UX specifications
+  - File structure
+  - Implementation phases
+
+> 1. yes store as wav locally and only compress on export
+2. just a simple box that flashes on each beat. We don't need to track time signature for now, it just 
+has to be able to stand out in my peripheral vision while I'm reading the music I'm singing
+3. collapse/expand would be nice to have, yes
+4. I really doubt I'll have more than 8 tracks per part ever.. most of the time I'll have 1-4
+5. yeah.. undo for delete would be nice, but we don't have to have more than one undo level.
+
+Let's also be sure to indicate that we need to build this using TDD with a red-green-refactor loop! 
+
+⏺ Perfect! I've got everything I need. Let me write a comprehensive technical design document.
+
+⏺ Write(DESIGN.md)
+  ⎿  Wrote 587 lines to DESIGN.md                                                                       
+     # SATB Harmony Recorder - Technical Design Document
+     ## Project Overview
+     A browser-based single-page application for recording multi-track SATB (Soprano, Alto, Tenor, Bass)
+     vocal harmonies. Users can record multiple takes per voice part, overdub while listening to existing
+      tracks, mix with individual track controls, and export the final mix as compressed audio.
+     ## Technology Stack
+     ### Core Framework
+     - **Vite** - Fast build tool, perfect for pure client-side apps
+     … +577 lines (ctrl+o to expand)
+
+⏺ I've created a comprehensive technical design document at /Users/jess/src/recorder/DESIGN.md!
+
+  Key Highlights:
+
+  Tech Stack:
+  - Vite + React + TypeScript
+  - Tone.js for audio timing & metronome
+  - Zustand for state management
+  - Dexie.js for IndexedDB storage
+  - Tailwind CSS for styling
+  - Vitest + React Testing Library for TDD
+
+  Architecture:
+  - Modular audio engine (Recorder, Mixer, Metronome, Visualizer, Exporter)
+  - Clear separation between UI and audio logic
+  - IndexedDB for storing WAV blobs + project metadata
+
+  Data Models:
+  - Project → VoiceParts (S/A/T/B) → Tracks (max 8 per part)
+  - Single-level undo for deletions
+  - Volume stored as 0-100, mapped to gain 0-1
+
+  Implementation:
+  - 10 phases, each using TDD red-green-refactor loop
+  - Starting with foundation, then audio engine, then UI
+  - Full test coverage with mocked Web Audio API
+
+  Please review the design doc and let me know:
+  1. Does this align with your vision?
+  2. Any changes or additions needed?
+  3. Ready to start implementation?
+
+  Once you approve, we'll begin with Phase 1: Project setup and foundation! 🎵
+
+> Great! some feedback:
+
+1. Let's note that I might have multiple microphones connected, and need to be able to choose among them 
+in the interface. 
+
+2. each (visible) sparkline should show a visual progression of the playhead as well as the playhead 
+moving. This doesn't have to be complex - whatever's simplest.
+
+3. bpm should be adjustable by typing a new value as well as clicking + or - buttons
+
+4. count-in is brilliant, thank you for catching that!
+
+5. during recording, I should see a VU indicator showing microphone activity. We can just show that where
+ the sparkline would be for the new track I'm recording.
+
+6. the overdub record interface is odd.. I think it'd be easier to have a simple toggle switch somewhere 
+in the interface for overdubbing or not. Default is not (and override-mutes all tracks during recording).
+ If enabled, it respects the current mute/solo selections per track.
+
+7. Mute interface - instead of adjusting GainNode it should just set an override 'muted' boolean, that 
+way we don't lose the Gain setting that I might have adjusted.
+
+8. seek - I should also be able to drag the playhead to a new position
+
+9. let's actually adjust the new/save behavior - New should always prompt for a project name (which can 
+show to the right of Export), then any changes are always saved immediately (and we can remove the need 
+for any explicit save). We can add a "delete project" button to the right of the project name in that 
+header bar.
+
+10. to the open questions / enhancements - those future features are definitely not in scope for now. The
+ wav storage is fine.. and we don't have to worry about browser compat - I'm happy to use the latest 
+Chromium series browsers.
+
+11. Performance targets aren't super important right now. The laptop I'm using is kind of a potato 
+anyway.
+
+Does that all make sense? If so, let's adjust this design file, move it to docs/, then add EARS-format 
+specs (per https://alistairmavin.com/ears/, e.g. "(spec-id): (description)" one per line), move out the 
+implementation plan into its own file and add a checklist that refers back to the EARS specs. 
+
+⏺ Perfect feedback! Let me update the design doc with all those changes, restructure it with EARS specs,
+  and organize the files properly.
+
+⏺ Read(DESIGN.md)
+  ⎿  Read 587 lines
+
+⏺ Now let me update the design doc with all your feedback and add EARS specifications:
+
+⏺ Write(DESIGN.md)
+  ⎿  Updated DESIGN.md with 354 additions and 269 removals                                            
+        4    
+        5    A browser-based single-page application for recording multi-track SATB (Soprano, Alto, 
+            Tenor, Bass) vocal harmonies. Users can record multiple takes per voice part, overdub 
+            while listening to existing tracks, mix with individual track controls, and export the 
+            final mix as compressed audio.
+        6    
+        7 +  **Target Platform:** Modern Chromium-based browsers (Chrome, Edge, Brave, etc.)
+        8 +  
+        9    ## Technology Stack
+       10    
+       11    ### Core Framework
+     ...
+       21      - Simplified audio routing
+       22    - **Web Audio API** - Direct access where needed
+       23      - MediaRecorder for capturing microphone
+       24 -    - AnalyserNode for waveform visualization
+       24 +    - AnalyserNode for waveform visualization and VU meter
+       25      - GainNode for individual track volume
+       26 +    - MediaDevices API for microphone enumeration/selection
+       27    - **lamejs** - Client-side MP3 encoding
+       28    
+       29    ### State Management
+     ...
+       33    
+       34    ### Storage
+       35    - **Dexie.js** - IndexedDB wrapper
+       36 -    - Store audio blobs (WAV format)
+       36 +    - Store audio blobs (WAV format - uncompressed for quality)
+       37      - Store project metadata
+       38 +    - Auto-save on every change
+       39      - Better than localStorage for large binary data
+       40    
+       41    ### UI/Styling
+     ...
+       47    - **Vitest** - Fast unit testing (Vite-native)
+       48    - **React Testing Library** - Component testing
+       49    - **Web Audio API mocks** - For testing audio logic
+       50 +  - **fake-indexeddb** - Mock IndexedDB for tests
+       51    - **TDD Approach** - Red-Green-Refactor loop for all features
+       52    
+       53    ## Architecture Overview
+     ...
+       60    ┌─────────────────▼───────────────────────────────────────┐
+       61    │                  Zustand Store                           │
+       62    │  (Application State, Project Data, Track Metadata)       │
+       63 +  │  - Auto-saves on every change to IndexedDB               │
+       64    └─────────────────┬───────────────────────────────────────┘
+       65                      │
+       66    ┌─────────────────▼───────────────────────────────────────┐
+     ...
+       87    ### Module Responsibilities
+       88    
+       89    **Recorder Module**
+       90 +  - Enumerate available microphone devices
+       91    - Request microphone permissions
+       92 -  - Create MediaRecorder instance
+       92 +  - Create MediaRecorder instance with selected device
+       93 +  - Display real-time VU meter during recording
+       94    - Record audio from current playhead position
+       95    - Convert to WAV blob
+       96    - Store in IndexedDB with track metadata
+     ...
+        96    **Mixer Module**
+        97    - Load all track audio buffers
+        98    - Create GainNode per track
+        99 -  - Handle solo/mute logic (solo mutes all others)
+        99 +  - Handle solo/mute logic (solo mutes all others, mute uses boolean flag)
+       100    - Sync playback across all tracks
+       101    - Control master playback (play/pause/stop)
+       102 +  - Respect overdub toggle for playback during recording
+       103    
+       104    **Metronome Module**
+       105 -  - Visual flash sync (via callback)
+       106 -  - Optional audio click track
+       107 -  - BPM control (default 120)
+       105 +  - Visual flash sync (via callback to UI)
+       106 +  - BPM control (default 120, editable via input or +/- buttons)
+       107    - Start/stop independent of tracks
+       108    
+       109    **Visualizer Module**
+       110    - Analyze track audio buffer
+       111    - Generate sparkline data (simplified waveform)
+       112 -  - Update playhead position visual
+       112 +  - Update playhead position visual on each track
+       113    - Handle playhead click-to-seek
+       114 +  - Handle playhead drag-to-seek
+       115 +  - Real-time VU meter for recording input
+       116    
+       117    **Exporter Module**
+       118    - Mix all enabled (non-muted) tracks with their gain levels
+       119    - Render to single audio buffer
+       120    - Export as WAV (uncompressed)
+       121 -  - Export as MP3 (using lamejs)
+       121 +  - Export as MP3 (using lamejs, 128kbps)
+       122    
+       123    ## Data Models
+       124    
+     ...
+       124    ```typescript
+       125    interface Project {
+       126      id: string;                    // UUID
+       127 -    name: string;                  // User-defined project name
+       127 +    name: string;                  // User-defined project name (required at creation)
+       128      bpm: number;                   // Metronome tempo
+       129 +    overdubEnabled: boolean;       // Global overdub toggle
+       130      createdAt: Date;
+       131 -    updatedAt: Date;
+       131 +    updatedAt: Date;               // Auto-updated on every change
+       132      voiceParts: VoicePart[];      // S, A, T, B
+       133    }
+       134    ```
+     ...
+       150      id: string;                    // UUID
+       151      voicePartType: VoicePartType;
+       152      name: string;                  // "S1", "S2", etc. (auto-generated)
+       153 -    audioBlob: Blob;               // WAV audio data
+       153 +    audioBlob: Blob;               // WAV audio data (uncompressed)
+       154      duration: number;              // Seconds
+       155      volume: number;                // 0-100 (maps to gain 0-1)
+       156 -    muted: boolean;
+       156 +    muted: boolean;                // Boolean flag (does NOT affect GainNode)
+       157      soloed: boolean;
+       158      waveformData: number[];        // Sparkline visualization data
+       159      createdAt: Date;
+     ...
+       167      isRecording: boolean;
+       168      playheadPosition: number;      // Seconds
+       169      duration: number;              // Total project duration (longest track)
+       170 +    selectedMicrophoneId: string | null;  // Selected microphone device ID
+       171 +    availableMicrophones: MediaDeviceInfo[];  // List of available mics
+       172    }
+       173    ```
+       174    
+     ...
+       178    }
+       179    ```
+       180    
+       181 +  ## EARS Requirements Specification
+       182 +  
+       183 +  ### Project Management
+       184 +  
+       185 +  **PROJ-001**: WHEN user clicks "New Project", the system shall prompt for a project 
+           + name.
+       186 +  **PROJ-002**: WHEN user creates a new project, the system shall initialize 4 empty voice
+           +  parts (S, A, T, B).
+       187 +  **PROJ-003**: WHEN user creates a new project, the system shall set default BPM to 120.
+       188 +  **PROJ-004**: WHEN user creates a new project, the system shall set overdub to disabled 
+           + by default.
+       189 +  **PROJ-005**: WHEN any project data changes, the system shall automatically save to 
+           + IndexedDB.
+       190 +  **PROJ-006**: WHEN user clicks "Load", the system shall display a list of saved projects
+           +  from IndexedDB.
+       191 +  **PROJ-007**: WHEN user selects a project to load, the system shall restore all project 
+           + metadata and audio tracks.
+       192 +  **PROJ-008**: WHEN user clicks "Delete Project", the system shall remove the current 
+           + project from IndexedDB.
+       193 +  **PROJ-009**: The system shall display the current project name in the top bar.
+       194 +  
+       195 +  ### Microphone & Input
+       196 +  
+       197 +  **MIC-001**: WHEN the application first loads, the system shall enumerate all available 
+           + microphone devices.
+       198 +  **MIC-002**: The system shall provide a UI control for selecting from available 
+           + microphone devices.
+       199 +  **MIC-003**: WHEN user changes microphone selection, the system shall use the newly 
+           + selected device for subsequent recordings.
+       200 +  **MIC-004**: WHEN microphone permission is denied, the system shall display an error 
+           + message.
+       201 +  **MIC-005**: WHILE recording is active, the system shall display a real-time VU meter 
+           + showing microphone input level.
+       202 +  
+       203 +  ### Recording
+       204 +  
+       205 +  **REC-001**: WHEN user clicks "Add Track" (+), the system shall request microphone 
+           + permissions if not already granted.
+       206 +  **REC-002**: WHEN user starts recording, the system shall display a countdown (3-2-1).
+       207 +  **REC-003**: WHEN countdown completes, the system shall start the MediaRecorder and 
+           + metronome.
+       208 +  **REC-004**: WHILE recording is active, the system shall display a VU meter in place of 
+           + the track sparkline.
+       209 +  **REC-005**: IF overdub is disabled, THEN the system shall mute all tracks during 
+           + recording.
+       210 +  **REC-006**: IF overdub is enabled, THEN the system shall respect current solo/mute 
+           + settings during recording.
+       211 +  **REC-007**: WHEN user stops recording, the system shall convert audio to WAV blob.
+       212 +  **REC-008**: WHEN recording completes, the system shall generate waveform data for 
+           + sparkline visualization.
+       213 +  **REC-009**: WHEN recording completes, the system shall auto-save the track to 
+           + IndexedDB.
+       214 +  **REC-010**: WHEN new track is added, the system shall auto-generate a track name (e.g.,
+           +  "S1", "S2").
+       215 +  **REC-011**: The system shall limit each voice part to a maximum of 8 tracks.
+       216 +  
+       217 +  ### Metronome
+       218 +  
+       219 +  **MET-001**: The system shall provide a visual metronome indicator.
+       220 +  **MET-002**: The system shall allow BPM adjustment via increment (+) and decrement (-) 
+           + buttons.
+       221 +  **MET-003**: The system shall allow BPM adjustment by typing a value directly into the 
+           + input field.
+       222 +  **MET-004**: WHEN BPM changes, the system shall update the metronome tempo immediately.
+       223 +  **MET-005**: The metronome visual shall flash/pulse at the specified BPM.
+       224 +  **MET-006**: WHILE recording is active, the metronome shall remain synchronized.
+       225 +  **MET-007**: WHILE playback is active, the metronome shall remain synchronized.
+       226 +  
+       227 +  ### Playback & Transport
+       228 +  
+       229 +  **PLAY-001**: WHEN user clicks Play, the system shall start playback from the current 
+           + playhead position.
+       230 +  **PLAY-002**: WHEN user clicks Pause, the system shall pause playback and maintain 
+           + playhead position.
+       231 +  **PLAY-003**: WHEN user clicks Stop, the system shall stop playback and reset playhead 
+           + to 0:00.
+       232 +  **PLAY-004**: WHILE playing, the system shall update the playhead visual in real-time 
+           + across all tracks.
+       233 +  **PLAY-005**: WHILE playing, the system shall display elapsed time and total duration.
+       234 +  **PLAY-006**: IF a track is muted, THEN the system shall exclude it from playback mix.
+       235 +  **PLAY-007**: IF a track is soloed, THEN the system shall mute all non-soloed tracks 
+           + during playback.
+       236 +  **PLAY-008**: The system shall sync playback across all non-muted tracks.
+       237 +  
+       238 +  ### Seeking & Playhead
+       239 +  
+       240 +  **SEEK-001**: WHEN user clicks on a track sparkline, the system shall move the playhead 
+           + to that time position.
+       241 +  **SEEK-002**: WHEN user drags the playhead, the system shall update playhead position in
+           +  real-time.
+       242 +  **SEEK-003**: IF playback is active during seek, THEN the system shall continue playing 
+           + from the new position.
+       243 +  **SEEK-004**: The system shall display a playhead indicator on each visible track 
+           + sparkline.
+       244 +  
+       245 +  ### Track Controls
+       246 +  
+       247 +  **TRACK-001**: WHEN user clicks Delete on a track, the system shall store the track in 
+           + single-level undo state.
+       248 +  **TRACK-002**: WHEN user clicks Delete on a track, the system shall remove it from 
+           + IndexedDB and UI.
+       249 +  **TRACK-003**: WHEN user presses Ctrl+Z (Cmd+Z on Mac), the system shall restore the 
+           + last deleted track.
+       250 +  **TRACK-004**: The system shall limit undo to a single level (last deleted track only).
+       251 +  **TRACK-005**: WHEN user clicks Solo on a track, the system shall set that track's solo 
+           + flag to true.
+       252 +  **TRACK-006**: WHEN user clicks Mute on a track, the system shall set that track's mute 
+           + boolean to true.
+       253 +  **TRACK-007**: The mute flag shall NOT modify the track's GainNode or volume setting.
+       254 +  **TRACK-008**: WHEN user adjusts volume slider, the system shall update the track's 
+           + GainNode gain (0-100 → 0-1).
+       255 +  **TRACK-009**: WHEN user adjusts volume slider, the system shall preserve the volume 
+           + setting when muted.
+       256 +  **TRACK-010**: WHEN user clicks track name, the system shall allow inline editing of 
+           + track name.
+       257 +  **TRACK-011**: The system shall display track controls in this order: [Delete] [Name] 
+           + [Solo] [Mute] [Volume Slider] [Sparkline].
+       258 +  
+       259 +  ### Voice Parts
+       260 +  
+       261 +  **VOICE-001**: The system shall provide 4 voice part sections: Soprano (S), Alto (A), 
+           + Tenor (T), Bass (B).
+       262 +  **VOICE-002**: WHEN user clicks collapse/expand toggle, the system shall hide/show 
+           + tracks for that voice part.
+       263 +  **VOICE-003**: The system shall display track count for each voice part.
+       264 +  **VOICE-004**: The system shall color-code voice parts (S=red, A=blue, T=green, 
+           + B=purple).
+       265 +  
+       266 +  ### Visualization
+       267 +  
+       268 +  **VIS-001**: The system shall generate sparkline waveform data for each track (100-200 
+           + data points).
+       269 +  **VIS-002**: The system shall display sparklines for all tracks.
+       270 +  **VIS-003**: WHILE recording, the system shall display a VU meter instead of sparkline 
+           + for the recording track.
+       271 +  **VIS-004**: The system shall display a synchronized playhead indicator across all 
+           + visible sparklines.
+       272 +  
+       273 +  ### Export
+       274 +  
+       275 +  **EXP-001**: WHEN user selects "Export WAV", the system shall mix all non-muted tracks 
+           + with their volume levels.
+       276 +  **EXP-002**: WHEN user selects "Export WAV", the system shall render to uncompressed WAV
+           +  format.
+       277 +  **EXP-003**: WHEN user selects "Export WAV", the system shall trigger browser download 
+           + with filename "<project-name>.wav".
+       278 +  **EXP-004**: WHEN user selects "Export MP3", the system shall mix all non-muted tracks 
+           + with their volume levels.
+       279 +  **EXP-005**: WHEN user selects "Export MP3", the system shall encode to MP3 at 128kbps 
+           + using lamejs.
+       280 +  **EXP-006**: WHEN user selects "Export MP3", the system shall trigger browser download 
+           + with filename "<project-name>.mp3".
+       281 +  **EXP-007**: The export dropdown shall provide both WAV and MP3 options.
+       282 +  
+       283 +  ### Overdub Control
+       284 +  
+       285 +  **OVER-001**: The system shall provide a global overdub toggle control in the UI.
+       286 +  **OVER-002**: WHEN overdub is disabled (default), the system shall mute all tracks 
+           + during recording.
+       287 +  **OVER-003**: WHEN overdub is enabled, the system shall play non-muted tracks during 
+           + recording.
+       288 +  **OVER-004**: The overdub setting shall be saved with the project.
+       289 +  
+       290 +  ### Error Handling
+       291 +  
+       292 +  **ERR-001**: IF microphone permission is denied, THEN the system shall display a 
+           + user-friendly error message.
+       293 +  **ERR-002**: IF storage quota is exceeded, THEN the system shall notify the user.
+       294 +  **ERR-003**: IF audio encoding fails, THEN the system shall display an error and not 
+           + create an invalid track.
+       295 +  
+       296    ## Core Features & User Workflows
+       297    
+       298    ### 1. New Project
+       299    1. User clicks "New"
+       300 -  2. Clear all state
+       301 -  3. Initialize empty project with 4 voice parts (S, A, T, B)
+       302 -  4. Reset BPM to 120
+       303 -  5. Clear IndexedDB project data
+       300 +  2. System prompts for project name
+       301 +  3. User enters name and confirms
+       302 +  4. System initializes empty project with 4 voice parts (S, A, T, B)
+       303 +  5. System sets BPM to 120, overdub disabled
+       304 +  6. System auto-saves to IndexedDB
+       305    
+       306    ### 2. Recording a Track
+       307 -  **Record with Metronome Only:**
+       308 -  1. User clicks (+) next to voice part
+       309 -  2. Request microphone permission (if first time)
+       310 -  3. Show countdown (3-2-1)
+       311 -  4. Start metronome visual flash
+       312 -  5. Start MediaRecorder
+       313 -  6. User sings, watching metronome
+       314 -  7. User clicks Stop
+       315 -  8. Process recording:
+       316 -     - Convert to WAV blob
+       317 -     - Generate waveform data
+       318 -     - Store in IndexedDB
+       319 -     - Add track to UI with auto-generated name (S1, S2, etc.)
+       307    
+       308 -  **Record with Overdub:**
+       309 -  1. User enables existing tracks (unmutes)
+       310 -  2. User clicks (+) next to voice part
+       311 -  3. Show countdown (3-2-1)
+       312 -  4. Start metronome + playback of existing tracks
+       313 -  5. Record new track while listening
+       314 -  6. Same processing as above
+       308 +  **Initial Setup:**
+       309 +  1. User selects microphone from dropdown (if multiple available)
+       310 +  2. User enables/disables overdub toggle as desired
+       311 +  3. User clicks (+) next to voice part
+       312    
+       313 +  **Recording Flow:**
+       314 +  1. System requests microphone permission (if first time)
+       315 +  2. System shows countdown (3-2-1)
+       316 +  3. System starts metronome visual flash
+       317 +  4. System starts MediaRecorder
+       318 +  5. System displays VU meter in track row (where sparkline will be)
+       319 +  6. If overdub disabled: all tracks muted
+       320 +  7. If overdub enabled: respect solo/mute settings
+       321 +  8. User sings, watching metronome and VU meter
+       322 +  9. User clicks Stop
+       323 +  
+       324 +  **Post-Recording:**
+       325 +  1. System converts to WAV blob
+       326 +  2. System generates waveform data
+       327 +  3. System stores in IndexedDB (auto-save)
+       328 +  4. System adds track to UI with auto-generated name (S1, S2, etc.)
+       329 +  5. System replaces VU meter with sparkline visualization
+       330 +  
+       331    ### 3. Track Controls
+       332 +  
+       333    **Delete:**
+       334 -  1. User clicks (del) button
+       335 -  2. Confirm deletion
+       336 -  3. Store track in undo state (single-level)
+       337 -  4. Remove from UI and IndexedDB
+       334 +  1. User clicks (×) button
+       335 +  2. System stores track in single-level undo state
+       336 +  3. System removes from UI and IndexedDB
+       337 +  4. System auto-saves
+       338    
+       339    **Undo Delete:**
+       340 -  1. User presses Ctrl+Z (or Undo button)
+       341 -  2. Restore track from undo state
+       342 -  3. Re-insert into IndexedDB and UI
+       340 +  1. User presses Ctrl+Z (Cmd+Z on Mac)
+       341 +  2. System restores track from undo state
+       342 +  3. System re-inserts into IndexedDB and UI
+       343 +  4. System auto-saves
+       344    
+       345    **Solo:**
+       346 -  1. User clicks Solo on track
+       347 -  2. Mute all other tracks
+       348 -  3. Only soloed track(s) play
+       346 +  1. User clicks Solo [S] on track
+       347 +  2. System sets solo flag on track
+       348 +  3. During playback: all non-soloed tracks muted
+       349 +  4. System auto-saves
+       350    
+       351    **Mute:**
+       352 -  1. User clicks Mute on track
+       353 -  2. Track GainNode set to 0
+       354 -  3. Track grayed out in UI
+       352 +  1. User clicks Mute [M] on track
+       353 +  2. System sets mute boolean flag (does NOT modify volume/GainNode)
+       354 +  3. During playback: track excluded from mix
+       355 +  4. Track grayed out in UI
+       356 +  5. System auto-saves
+       357    
+       358    **Volume:**
+       359    1. User adjusts horizontal slider (0-100)
+       360 -  2. Map to GainNode gain (0-1)
+       361 -  3. Real-time volume adjustment during playback
+       360 +  2. System maps to GainNode gain (0-1)
+       361 +  3. Volume persists independently of mute state
+       362 +  4. Real-time volume adjustment during playback
+       363 +  5. System auto-saves
+       364    
+       365    ### 4. Playback & Seeking
+       366 +  
+       367    **Play/Pause:**
+       368    1. User clicks Play
+       369 -  2. Start all non-muted tracks from playhead position
+       370 -  3. Update playhead visual in real-time
+       371 -  4. Sync metronome if enabled
+       369 +  2. System starts all non-muted, non-solo-excluded tracks from playhead position
+       370 +  3. System updates playhead visual in real-time across all sparklines
+       371 +  4. System syncs metronome if enabled
+       372 +  5. User clicks Pause
+       373 +  6. System pauses, maintains playhead position
+       374    
+       375 -  **Seek:**
+       375 +  **Seek (Click):**
+       376    1. User clicks on track sparkline
+       377 -  2. Calculate time position from click X coordinate
+       378 -  3. Update playhead position
+       379 -  4. If playing, continue from new position
+       377 +  2. System calculates time position from click X coordinate
+       378 +  3. System updates playhead position
+       379 +  4. If playing, system continues from new position
+       380    
+       381 +  **Seek (Drag):**
+       382 +  1. User clicks and drags playhead indicator
+       383 +  2. System updates playhead position in real-time during drag
+       384 +  3. System updates time display
+       385 +  4. If playing, system continues from new position on release
+       386 +  
+       387 +  **Stop:**
+       388 +  1. User clicks Stop
+       389 +  2. System stops playback
+       390 +  3. System resets playhead to 0:00
+       391 +  
+       392    ### 5. Metronome Control
+       393 -  1. User adjusts BPM with (-) (+) buttons or input
+       394 -  2. Metronome recalculates interval
+       395 -  3. Visual flash box pulses at tempo
+       396 -  4. Optional: Toggle audio click on/off
+       393    
+       394 -  ### 6. Save/Load Project
+       395 -  **Save:**
+       396 -  1. User clicks "Save"
+       397 -  2. Prompt for project name (if new)
+       398 -  3. Serialize project metadata
+       399 -  4. Audio blobs already in IndexedDB
+       400 -  5. Store project reference
+       394 +  **Via Buttons:**
+       395 +  1. User clicks (-) or (+) button
+       396 +  2. System decrements/increments BPM by 1
+       397 +  3. System updates metronome tempo
+       398 +  4. System auto-saves
+       399    
+       400 -  **Load:**
+       400 +  **Via Direct Input:**
+       401 +  1. User clicks on BPM value
+       402 +  2. User types new BPM value
+       403 +  3. User presses Enter or clicks away
+       404 +  4. System updates metronome tempo
+       405 +  5. System auto-saves
+       406 +  
+       407 +  ### 6. Load Project
+       408    1. User clicks "Load"
+       409 -  2. Show list of saved projects
+       409 +  2. System displays list of saved projects from IndexedDB
+       410    3. User selects project
+       411 -  4. Load metadata from IndexedDB
+       412 -  5. Load audio blobs for each track
+       413 -  6. Reconstruct UI state
+       411 +  4. System loads metadata
+       412 +  5. System loads audio blobs for each track
+       413 +  6. System reconstructs UI state (expanded/collapsed, playhead, etc.)
+       414    
+       415 -  ### 7. Export
+       415 +  ### 7. Delete Project
+       416 +  1. User clicks "Delete Project" button
+       417 +  2. System prompts for confirmation
+       418 +  3. User confirms
+       419 +  4. System removes project from IndexedDB
+       420 +  5. System returns to new project state
+       421 +  
+       422 +  ### 8. Export
+       423 +  
+       424    **Export WAV:**
+       425    1. User clicks "Export" → "WAV"
+       426 -  2. Mix all non-muted tracks with volume levels
+       427 -  3. Render to single audio buffer
+       428 -  4. Convert to WAV blob
+       429 -  5. Trigger browser download
+       426 +  2. System mixes all non-muted tracks with volume levels
+       427 +  3. System renders to single audio buffer
+       428 +  4. System converts to WAV blob
+       429 +  5. System triggers browser download: "<project-name>.wav"
+       430    
+       431    **Export MP3:**
+       432    1. User clicks "Export" → "MP3"
+       433 -  2. Mix all non-muted tracks
+       434 -  3. Encode to MP3 using lamejs (128kbps default)
+       435 -  4. Trigger browser download
+       433 +  2. System mixes all non-muted tracks with volume levels
+       434 +  3. System encodes to MP3 using lamejs (128kbps)
+       435 +  4. System triggers browser download: "<project-name>.mp3"
+       436    
+       437    ## UI/UX Specifications
+       438    
+       439    ### Layout Structure
+       440    ```
+       441 -  ┌─────────────────────────────────────────────────────────┐
+       442 -  │ [New] [Save] [Load] [Export ▼]                          │
+       443 -  ├─────────────────────────────────────────────────────────┤
+       444 -  │ Metronome: [−] [120] [+] [□ Visual Flash]               │
+       445 -  ├─────────────────────────────────────────────────────────┤
+       446 -  │ [Play/Pause] [Stop]    Playhead: 00:23 / 02:45          │
+       447 -  ├─────────────────────────────────────────────────────────┤
+       448 -  │                                                          │
+       449 -  │ ▼ Soprano (4 tracks)                                    │
+       450 -  │   [×] S1 [S] [M] [====░░░░] ───/\──/\───/\─             │
+       451 -  │   [×] S2 [S] [M] [======░░] ──/\───/\──/\──             │
+       452 -  │   [×] S3 [S] [M] [===░░░░░] ───/\──/\───/\─             │
+       453 -  │   [×] S4 [S] [M] [=====░░░] ──/\───/\──/\──             │
+       454 -  │   [+ Add Track]                                          │
+       455 -  │                                                          │
+       456 -  │ ▼ Alto (2 tracks)                                       │
+       457 -  │   [×] A1 [S] [M] [====░░░░] ───/\──/\───/\─             │
+       458 -  │   [×] A2 [S] [M] [======░░] ──/\───/\──/\──             │
+       459 -  │   [+ Add Track]                                          │
+       460 -  │                                                          │
+       461 -  │ ▶ Tenor (collapsed)                                     │
+       462 -  │                                                          │
+       463 -  │ ▶ Bass (collapsed)                                      │
+       464 -  │                                                          │
+       465 -  └─────────────────────────────────────────────────────────┘
+       441 +  ┌─────────────────────────────────────────────────────────────────────┐
+       442 +  │ [New] [Load] [Export ▼]   Project: "My Harmony"  [Delete Project]  │
+       443 +  ├─────────────────────────────────────────────────────────────────────┤
+       444 +  │ Metronome: [−] [120] [+] [□ Flash]   Overdub: [Toggle]             │
+       445 +  ├─────────────────────────────────────────────────────────────────────┤
+       446 +  │ [Play/Pause] [Stop]    Playhead: 00:23 / 02:45                     │
+       447 +  ├─────────────────────────────────────────────────────────────────────┤
+       448 +  │ Microphone: [Select Device ▼]                                      │
+       449 +  ├─────────────────────────────────────────────────────────────────────┤
+       450 +  │                                                                      │
+       451 +  │ ▼ Soprano (4 tracks)                                                │
+       452 +  │   [×] S1 [S] [M] [====░░░░] ───/\|─/\───/\─ (playhead: |)          │
+       453 +  │   [×] S2 [S] [M] [======░░] ──/\─|─/\──/\── (playhead: |)          │
+       454 +  │   [×] S3 [S] [M] [===░░░░░] ───/\|──/\───/\ (playhead: |)          │
+       455 +  │   [×] S4 [S] [M] [=====░░░] ──/\─|─/\──/\── (playhead: |)          │
+       456 +  │   [+ Add Track]                                                      │
+       457 +  │                                                                      │
+       458 +  │ ▼ Alto (2 tracks)                                                   │
+       459 +  │   [×] A1 [S] [M] [====░░░░] ───/\|─/\───/\─                        │
+       460 +  │   [×] A2 [S] [M] [======░░] ──/\─|─/\──/\──                        │
+       461 +  │   [+ Add Track]                                                      │
+       462 +  │                                                                      │
+       463 +  │ ▶ Tenor (collapsed)                                                 │
+       464 +  │                                                                      │
+       465 +  │ ▶ Bass (collapsed)                                                  │
+       466 +  │                                                                      │
+       467 +  └──────────────────────────────────────────────────────────────────────┘
+       468    ```
+       469    
+       470    ### Component Breakdown
+       471    
+       472    **TopBar**
+       473 -  - New, Save, Load, Export buttons
+       474 -  - Export dropdown (WAV/MP3)
+       473 +  - New Project button (prompts for name)
+       474 +  - Load button (shows project list)
+       475 +  - Export dropdown (WAV/MP3 options)
+       476 +  - Project name display (editable)
+       477 +  - Delete Project button
+       478    
+       479    **MetronomeControl**
+       480 -  - BPM decrease button
+       481 -  - BPM input (editable)
+       482 -  - BPM increase button
+       483 -  - Visual flash indicator (box that pulses)
+       480 +  - BPM decrease button (-)
+       481 +  - BPM input (editable, type to change)
+       482 +  - BPM increase button (+)
+       483 +  - Visual flash indicator (simple box that pulses)
+       484 +  - Overdub toggle switch
+       485    
+       486 +  **MicrophoneSelector**
+       487 +  - Dropdown showing available microphone devices
+       488 +  - Selected device persists for recording sessions
+       489 +  
+       490    **TransportControl**
+       491 -  - Play/Pause button
+       491 +  - Play/Pause button (single toggle button)
+       492    - Stop button
+       493    - Playhead time display (current / total)
+       494    
+       495    **VoicePartSection** (x4, one per S/A/T/B)
+       496    - Collapse/expand toggle
+       497    - Voice part label + track count
+       498 +  - Color-coded background (S=red, A=blue, T=green, B=purple)
+       499    - TrackRow components
+       500 -  - Add Track button
+       500 +  - Add Track button (+)
+       501    
+       502    **TrackRow**
+       503    - Delete button [×]
+     ...
+       346    - Solo button [S] (toggle)
+       347    - Mute button [M] (toggle)
+       348    - Volume slider (horizontal, 0-100)
+       349 -  - Waveform sparkline (clickable for seeking)
+       350 -  - Playhead indicator (vertical line)
+       349 +  - Waveform sparkline (clickable/draggable for seeking)
+       350 +    - Shows playhead indicator (vertical line)
+       351 +    - Replaced by VU meter during recording
+       352 +  - Playhead indicator (thin vertical line, synced across all tracks)
+       353    
+       354    ### Visual Design Notes
+       355 -  - **Color coding**: Assign each voice part a color (S=red, A=blue, T=green, B=purple)
+       356 -  - **Metronome flash**: Simple white box that changes to yellow/gold on beat
+       357 -  - **Sparkline**: Simplified waveform, 100-200 data points max
+       358 -  - **Playhead**: Thin vertical line across all tracks, synced position
+       355 +  - **Color coding**: Voice parts have colored headers/accents 
+           +  (S=red, A=blue, T=green, B=purple)
+       356 +  - **Metronome flash**: Simple box that changes color on each beat
+       357 +  - **Sparkline**: Simplified waveform, 100-200 data points
+       358 +  - **Playhead**: Thin vertical line across all tracks, synced position, draggable
+       359 +  - **VU Meter**: Real-time bar/line showing microphone input level during recording
+       360 +  - **Muted tracks**: Grayed out but volume slider still functional
+       361    
+       362    ## Testing Strategy
+       363    
+       364    ### Test-Driven Development (TDD)
+       365    **Red-Green-Refactor Loop:**
+       366 -  1. **Red**: Write failing test for new feature
+       366 +  1. **Red**: Write failing test for new feature/requirement
+       367    2. **Green**: Write minimal code to pass test
+       368    3. **Refactor**: Clean up code while keeping tests green
+       369    
+       370 +  All EARS requirements should have corresponding tests. Each requirement ID (e.g., 
+           + PROJ-001) should map to one or more test cases.
+       371 +  
+       372    ### Test Coverage Areas
+       373    
+       374    **Unit Tests (Vitest)**
+       375    - Audio Engine modules (mocked Web Audio API)
+       376 -    - Recorder: track recording, WAV conversion
+       377 -    - Mixer: track mixing, solo/mute logic
+       378 -    - Metronome: BPM calculation, timing
+       379 -    - Exporter: mixing algorithm, format conversion
+       376 +    - Recorder: device enumeration, track recording, WAV conversion, VU meter
+       377 +    - Mixer: track mixing, solo/mute logic (boolean flags), volume control
+       378 +    - Metronome: BPM calculation, timing, visual callback
+       379 +    - Exporter: mixing algorithm, WAV/MP3 format conversion
+       380    - State management (Zustand store)
+       381      - Project CRUD operations
+       382 +    - Auto-save on changes
+       383      - Track operations (add/delete/update)
+       384 -    - Undo/redo logic
+       384 +    - Undo/redo logic (single-level)
+       385 +    - Overdub toggle
+       386    - Utilities
+       387      - Audio buffer processing
+       388      - Waveform data generation
+       389      - Time formatting
+       390 +    - Microphone enumeration
+       391    
+       392    **Component Tests (React Testing Library)**
+       393 -  - TrackRow: button interactions, volume changes
+       393 +  - TopBar: New, Load, Delete Project, project name display
+       394 +  - MicrophoneSelector: device enumeration, selection
+       395 +  - TrackRow: delete, solo, mute, volume, name editing
+       396    - VoicePartSection: collapse/expand, track management
+       397 -  - MetronomeControl: BPM adjustments
+       398 -  - TransportControl: playback controls
+       399 -  - Export flow
+       397 +  - MetronomeControl: BPM adjustments (buttons & direct input), overdub toggle
+       398 +  - TransportControl: play/pause/stop, time display
+       399 +  - Waveform: sparkline rendering, playhead, click/drag seeking, VU meter
+       400    
+       401    **Integration Tests**
+       402    - Full record → playback → export workflow
+       403 -  - Save → Load project flow
+       403 +  - Load project flow
+       404    - Solo/Mute interactions across tracks
+       405 +  - Overdub enabled/disabled recording
+       406 +  - Auto-save functionality
+       407 +  - Undo delete → restore track
+       408    
+       409    ### Mocking Strategy
+       410 -  - Mock Web Audio API (AudioContext, GainNode, etc.)
+       411 -  - Mock MediaRecorder
+       410 +  - Mock Web Audio API (AudioContext, GainNode, AnalyserNode, MediaRecorder)
+       411 +  - Mock MediaDevices API (enumerateDevices, getUserMedia)
+       412    - Mock IndexedDB (using fake-indexeddb)
+       413    - Mock Tone.js Transport
+       414    
+     ...
+       402    
+       403    ```
+       404    recorder/
+       405 +  ├── docs/
+       406 +  │   ├── DESIGN.md                # This document
+       407 +  │   └── IMPLEMENTATION.md        # Implementation plan with checklist
+       408    ├── public/
+       409    │   └── index.html
+       410    ├── src/
+     ...
+       409    │   ├── App.tsx                  # Root component
+       410    │   ├── components/
+       411    │   │   ├── TopBar.tsx
+       412 +  │   │   ├── MicrophoneSelector.tsx
+       413    │   │   ├── MetronomeControl.tsx
+       414    │   │   ├── TransportControl.tsx
+       415    │   │   ├── VoicePartSection.tsx
+       416    │   │   ├── TrackRow.tsx
+       417 -  │   │   └── Waveform.tsx
+       417 +  │   │   ├── Waveform.tsx
+       418 +  │   │   └── VUMeter.tsx
+       419    │   ├── audio/
+       420    │   │   ├── engine.ts            # Audio engine coordinator
+       421 -  │   │   ├── recorder.ts          # Recording logic
+       421 +  │   │   ├── recorder.ts          # Recording logic + device management
+       422    │   │   ├── mixer.ts             # Mixing & playback
+       423    │   │   ├── metronome.ts         # Metronome timing
+       424 -  │   │   ├── visualizer.ts        # Waveform generation
+       424 +  │   │   ├── visualizer.ts        # Waveform generation + VU meter
+       425    │   │   └── exporter.ts          # WAV/MP3 export
+       426    │   ├── store/
+       427 -  │   │   ├── useProjectStore.ts   # Zustand store
+       427 +  │   │   ├── useProjectStore.ts   # Zustand store with auto-save
+       428    │   │   └── types.ts             # TypeScript interfaces
+       429    │   ├── db/
+       430    │   │   └── index.ts             # Dexie.js setup
+     ...
+       438    ├── vite.config.ts
+       439    ├── tsconfig.json
+       440    ├── tailwind.config.js
+       441 -  └── DESIGN.md                    # This document
+       441 +  └── CLAUDE.md                    # Claude Code instructions
+       442    ```
+       443    
+       444 -  ## Implementation Phases
+       444 +  ## Technical Constraints
+       445    
+       446 -  ### Phase 1: Project Setup & Foundation (TDD)
+       447 -  - [ ] Initialize Vite + React + TypeScript project
+       448 -  - [ ] Configure Vitest + React Testing Library
+       449 -  - [ ] Set up Tailwind CSS
+       450 -  - [ ] Install dependencies (Tone.js, Zustand, Dexie, lamejs)
+       451 -  - [ ] Create basic project structure
+       452 -  - [ ] Set up Web Audio API mocks for testing
+       446 +  ### Browser Compatibility
+       447 +  - **Target**: Latest Chromium-based browsers (Chrome, Edge, Brave)
+       448 +  - **No legacy browser support needed**
+       449 +  - **No polyfills required**
+       450    
+       451 -  ### Phase 2: Audio Engine Core (TDD)
+       452 -  - [ ] **Metronome Module**
+       453 -    - [ ] Write tests for BPM calculation
+       454 -    - [ ] Implement Tone.js Transport integration
+       455 -    - [ ] Visual callback system
+       456 -  - [ ] **Recorder Module**
+       457 -    - [ ] Write tests for MediaRecorder setup
+       458 -    - [ ] Implement microphone capture
+       459 -    - [ ] WAV blob conversion
+       460 -  - [ ] **Mixer Module**
+       461 -    - [ ] Write tests for multi-track playback
+       462 -    - [ ] Implement GainNode per track
+       463 -    - [ ] Solo/mute logic
+       451 +  ### Audio Storage
+       452 +  - **Format**: Uncompressed WAV for all stored tracks
+       453 +  - **Rationale**: Maintains maximum quality, export compression happens only on demand
+       454 +  - **Trade-off**: Larger storage footprint acceptable for target use case
+       455    
+       456 -  ### Phase 3: Data Layer (TDD)
+       457 -  - [ ] **IndexedDB Setup**
+       458 -    - [ ] Write tests for Dexie schema
+       459 -    - [ ] Implement audio blob storage
+       460 -    - [ ] Project metadata CRUD
+       461 -  - [ ] **Zustand Store**
+       462 -    - [ ] Write tests for state mutations
+       463 -    - [ ] Implement project state
+       464 -    - [ ] Track management actions
+       465 -    - [ ] Undo state
+       456 +  ### Performance
+       457 +  - **Not a primary concern** for this version
+       458 +  - System should handle 32 tracks (8 per voice part) without critical failures
+       459 +  - UI responsiveness more important than speed optimization
+       460    
+       461 -  ### Phase 4: Basic UI (TDD)
+       462 -  - [ ] **Layout Components**
+       463 -    - [ ] Write component tests for TopBar
+       464 -    - [ ] Implement TopBar (New/Save/Load/Export)
+       465 -    - [ ] Write tests for MetronomeControl
+       466 -    - [ ] Implement MetronomeControl with BPM
+       467 -  - [ ] **Transport Controls**
+       468 -    - [ ] Write tests for play/pause/stop
+       469 -    - [ ] Implement TransportControl component
+       470 -  
+       471 -  ### Phase 5: Track Management (TDD)
+       472 -  - [ ] **VoicePartSection Component**
+       473 -    - [ ] Write tests for collapse/expand
+       474 -    - [ ] Implement voice part grouping
+       475 -    - [ ] Add track button
+       476 -  - [ ] **TrackRow Component**
+       477 -    - [ ] Write tests for all controls
+       478 -    - [ ] Implement delete/solo/mute
+       479 -    - [ ] Volume slider
+       480 -    - [ ] Track naming
+       481 -  
+       482 -  ### Phase 6: Recording & Playback (TDD)
+       483 -  - [ ] **Recording Flow**
+       484 -    - [ ] Write integration tests for record workflow
+       485 -    - [ ] Implement countdown UI
+       486 -    - [ ] Wire up recorder to UI
+       487 -    - [ ] Overdub support
+       488 -  - [ ] **Playback Flow**
+       489 -    - [ ] Write integration tests for playback
+       490 -    - [ ] Sync all tracks
+       491 -    - [ ] Playhead visualization
+       492 -  
+       493 -  ### Phase 7: Visualization (TDD)
+       494 -  - [ ] **Waveform Sparklines**
+       495 -    - [ ] Write tests for waveform data generation
+       496 -    - [ ] Implement AnalyserNode integration
+       497 -    - [ ] Canvas/SVG rendering
+       498 -    - [ ] Click-to-seek functionality
+       499 -  
+       500 -  ### Phase 8: Export & Save/Load (TDD)
+       501 -  - [ ] **Export Module**
+       502 -    - [ ] Write tests for mixing algorithm
+       503 -    - [ ] Implement WAV export
+       504 -    - [ ] Implement MP3 export (lamejs)
+       505 -  - [ ] **Save/Load**
+       506 -    - [ ] Write tests for serialization
+       507 -    - [ ] Implement save project UI
+       508 -    - [ ] Implement load project UI
+       509 -  
+       510 -  ### Phase 9: Polish & UX Enhancements (TDD)
+       511 -  - [ ] **Undo/Redo**
+       512 -    - [ ] Write tests for undo logic
+       513 -    - [ ] Implement single-level undo for delete
+       514 -  - [ ] **Keyboard Shortcuts**
+       515 -    - [ ] Space for play/pause
+       516 -    - [ ] Ctrl+Z for undo
+       517 -  - [ ] **Error Handling**
+       518 -    - [ ] Microphone permission denied
+       519 -    - [ ] Storage quota exceeded
+       520 -    - [ ] Invalid audio files
+       521 -  
+       522 -  ### Phase 10: Testing & Bug Fixes
+       523 -  - [ ] Full integration testing
+       524 -  - [ ] Cross-browser testing (Chrome, Firefox, Safari)
+       525 -  - [ ] Performance optimization
+       526 -  - [ ] Memory leak checks
+       527 -  - [ ] Documentation
+       528 -  
+       529 -  ## Open Questions / Future Enhancements
+       530 -  
+       531 -  ### Future Features (Out of Scope for v1)
+       532 -  - **Time Signature Support** - Currently assumes 4/4
+       533 -  - **Punch-in Recording** - Record from middle, auto-splice
+       534 -  - **Effects** - Reverb, EQ, compression
+       535 -  - **MIDI Import** - Import backing tracks
+       536 -  - **Cloud Storage** - Sync projects across devices
+       537 -  - **Collaboration** - Share projects with others
+       538 -  - **Mobile Support** - Touch-optimized UI
+       539 -  - **Waveform Editing** - Trim, fade in/out
+       540 -  
+       541 -  ### Technical Decisions to Revisit
+       542 -  - **Audio Format**: WAV is large; consider storing as compressed format?
+       543 -  - **Max Tracks**: 8 per part seems reasonable, but may need adjustment
+       544 -  - **Browser Compatibility**: Test on older browsers, polyfills needed?
+       545 -  
+       461    ## Success Criteria
+       462    
+       463    ### Minimum Viable Product (MVP)
+       464 -  - ✅ Record multiple tracks per voice part (SATB)
+       464 +  - ✅ Record multiple tracks per voice part (SATB) with selectable microphone
+       465    - ✅ Play back with individual volume control
+       466 -  - ✅ Solo/mute functionality
+       467 -  - ✅ Visual metronome
+       468 -  - ✅ Overdub capability
+       466 +  - ✅ Solo/mute functionality (mute as boolean flag, preserves volume)
+       467 +  - ✅ Visual metronome with editable BPM
+       468 +  - ✅ Overdub toggle control
+       469 +  - ✅ VU meter during recording
+       470 +  - ✅ Draggable playhead
+       471    - ✅ Export to WAV/MP3
+       472 -  - ✅ Save/load projects locally
+       473 -  - ✅ All features covered by tests (TDD)
+       472 +  - ✅ Auto-save projects with prompted name
+       473 +  - ✅ Load/delete projects
+       474 +  - ✅ All EARS requirements covered by tests (TDD)
+       475    
+       476 -  ### Performance Targets
+       477 -  - Record and play back 32 tracks (8 per part) simultaneously
+       478 -  - Export 5-minute song in under 10 seconds
+       479 -  - Load project in under 2 seconds
+       480 -  - UI remains responsive during recording/playback
+       481 -  
+       476    ---
+       477    
+       478 -  **Document Version:** 1.0
+       478 +  **Document Version:** 2.0
+       479    **Last Updated:** 2025-11-13
+       480    **Author:** Claude Code + Jess
+
+⏺ Bash(mkdir -p /Users/jess/src/recorder/docs && mv /Users/jess/src/recorder/DESIGN.md
+      /Users/jess/src/recorder/docs/DESIGN.md)
+  ⎿  (No content)
+
+⏺ Now let me create the implementation plan with a checklist that references the EARS specs:
+
+⏺ Write(docs/IMPLEMENTATION.md)
+  ⎿  Wrote 591 lines to docs/IMPLEMENTATION.md                                                         
+     # SATB Harmony Recorder - Implementation Plan
+     This document outlines the implementation phases and tasks for building the SATB Harmony Recorder
+     application. Each task references EARS requirements from [DESIGN.md](./DESIGN.md).
+     ## Development Approach
+     **Test-Driven Development (TDD) - Red-Green-Refactor Loop:**
+     1. **Red**: Write a failing test for the requirement
+     2. **Green**: Write minimal code to make the test pass
+     3. **Refactor**: Improve code quality while keeping tests green
+     … +581 lines (ctrl+o to expand)
+
+⏺ Perfect! I've updated the design document with all your feedback and reorganized everything. Here's
+  what's been created:
+
+  Documentation Structure
+
+  docs/DESIGN.md - Updated technical design with:
+  - All your feedback incorporated:
+    - Microphone selection UI
+    - Playhead visual on sparklines + draggable playhead
+    - BPM editable by typing
+    - VU meter during recording
+    - Overdub toggle (simplified interface)
+    - Mute as boolean flag (preserves volume)
+    - Auto-save with prompted project names
+    - Delete Project button
+  - 76 EARS-format requirements covering:
+    - Project Management (9 specs)
+    - Microphone & Input (5 specs)
+    - Recording (11 specs)
+    - Metronome (7 specs)
+    - Playback & Transport (8 specs)
+    - Seeking & Playhead (4 specs)
+    - Track Controls (11 specs)
+    - Voice Parts (4 specs)
+    - Visualization (4 specs)
+    - Export (7 specs)
+    - Overdub Control (4 specs)
+    - Error Handling (3 specs)
+
+  docs/IMPLEMENTATION.md - Implementation plan with:
+  - 10 phases broken down into concrete tasks
+  - Each task references EARS requirement IDs
+  - TDD approach emphasized for every task
+  - Complete EARS requirements coverage checklist at the end
+  - Progress tracking section
+
+  Key Changes from Your Feedback
+
+  1. ✅ Microphone selection dropdown added (MIC-001, MIC-002, MIC-003)
+  2. ✅ Playhead shown on each sparkline, draggable (SEEK-002, SEEK-004, VIS-004)
+  3. ✅ BPM editable via typing (MET-003)
+  4. ✅ VU meter during recording (MIC-005, REC-004, VIS-003)
+  5. ✅ Overdub toggle switch (OVER-001, OVER-002, OVER-003)
+  6. ✅ Mute as boolean flag, preserves volume (TRACK-007, TRACK-009)
+  7. ✅ Auto-save on every change, prompted project name (PROJ-001, PROJ-005)
+  8. ✅ Delete Project button (PROJ-008)
+  9. ✅ Removed future features section
+  10. ✅ Performance targets simplified
+
+  Ready to start Phase 1 (Project Setup & Foundation)?
+
+> oh! I also need to play tones to know where to start. Let's add a simple 12-tone tone generator, 
+centered around A440, to the right of the microphone selector interface. If we can render it as simple 
+piano keys that would be nice, but also just the note names would be fine too if that's easier. 
+
+⏺ Great addition! A pitch pipe is super helpful for finding your starting note. Let me update both design
+   documents to include a 12-tone generator.
+
+⏺ Read(docs/DESIGN.md)
+  ⎿  Read 100 lines
+
+⏺ Update(docs/DESIGN.md)
+  ⎿  Updated docs/DESIGN.md with 6 additions                                
+       114    - BPM control (default 120, editable via input or +/- buttons)
+       115    - Start/stop independent of tracks
+       116    
+       117 +  **ToneGenerator Module**
+       118 +  - Generate reference tones for pitch finding
+       119 +  - Provide 12-tone chromatic scale (C4 to B4, includes A440)
+       120 +  - Play tone on user interaction
+       121 +  - Stop tone on release or second click
+       122 +  
+       123    **Visualizer Module**
+       124    - Analyze track audio buffer
+       125    - Generate sparkline data (simplified waveform)
+
+⏺ Read(docs/DESIGN.md)
+  ⎿  Read 50 lines
+
+⏺ Update(docs/DESIGN.md)
+  ⎿  Updated docs/DESIGN.md with 9 additions                                                          
+       306    **OVER-003**: WHEN overdub is enabled, the system shall play non-muted tracks during 
+             recording.
+       307    **OVER-004**: The overdub setting shall be saved with the project.
+       308    
+       309 +  ### Tone Generator (Pitch Reference)
+       310 +  
+       311 +  **TONE-001**: The system shall provide a tone generator for pitch reference.
+       312 +  **TONE-002**: The tone generator shall provide 12 chromatic tones from C4 (261.63 Hz) to
+           +  B4 (493.88 Hz), including A4 (440 Hz).
+       313 +  **TONE-003**: The system shall display tone controls to the right of the microphone 
+           + selector.
+       314 +  **TONE-004**: WHEN user clicks/presses a tone button, the system shall play that tone.
+       315 +  **TONE-005**: WHEN user releases or clicks again, the system shall stop the tone.
+       316 +  **TONE-006**: The tone generator UI may render as piano keys OR as labeled buttons 
+           + showing note names.
+       317 +  
+       318    ### Error Handling
+       319    
+       320    **ERR-001**: IF microphone permission is denied, THEN the system shall display a 
+             user-friendly error message.
+
+⏺ Read(docs/DESIGN.md)
+  ⎿  Read 50 lines
+
+⏺ Update(docs/DESIGN.md)
+  ⎿  Updated docs/DESIGN.md with 27 additions and 27 removals                                       
+       466    
+       467    ### Layout Structure
+       468    ```
+       469 -  ┌─────────────────────────────────────────────────────────────────────┐
+       470 -  │ [New] [Load] [Export ▼]   Project: "My Harmony"  [Delete Project]  │
+       471 -  ├─────────────────────────────────────────────────────────────────────┤
+       472 -  │ Metronome: [−] [120] [+] [□ Flash]   Overdub: [Toggle]             │
+       473 -  ├─────────────────────────────────────────────────────────────────────┤
+       474 -  │ [Play/Pause] [Stop]    Playhead: 00:23 / 02:45                     │
+       475 -  ├─────────────────────────────────────────────────────────────────────┤
+       476 -  │ Microphone: [Select Device ▼]                                      │
+       477 -  ├─────────────────────────────────────────────────────────────────────┤
+       478 -  │                                                                      │
+       479 -  │ ▼ Soprano (4 tracks)                                                │
+       480 -  │   [×] S1 [S] [M] [====░░░░] ───/\|─/\───/\─ (playhead: |)          │
+       481 -  │   [×] S2 [S] [M] [======░░] ──/\─|─/\──/\── (playhead: |)          │
+       482 -  │   [×] S3 [S] [M] [===░░░░░] ───/\|──/\───/\ (playhead: |)          │
+       483 -  │   [×] S4 [S] [M] [=====░░░] ──/\─|─/\──/\── (playhead: |)          │
+       484 -  │   [+ Add Track]                                                      │
+       485 -  │                                                                      │
+       486 -  │ ▼ Alto (2 tracks)                                                   │
+       487 -  │   [×] A1 [S] [M] [====░░░░] ───/\|─/\───/\─                        │
+       488 -  │   [×] A2 [S] [M] [======░░] ──/\─|─/\──/\──                        │
+       489 -  │   [+ Add Track]                                                      │
+       490 -  │                                                                      │
+       491 -  │ ▶ Tenor (collapsed)                                                 │
+       492 -  │                                                                      │
+       493 -  │ ▶ Bass (collapsed)                                                  │
+       494 -  │                                                                      │
+       495 -  └──────────────────────────────────────────────────────────────────────┘
+       469 +  ┌──────────────────────────────────────────────────────────────────────────────┐
+       470 +  │ [New] [Load] [Export ▼]   Project: "My Harmony"  [Delete Project]           │
+       471 +  ├──────────────────────────────────────────────────────────────────────────────┤
+       472 +  │ Metronome: [−] [120] [+] [□ Flash]   Overdub: [Toggle]                      │
+       473 +  ├──────────────────────────────────────────────────────────────────────────────┤
+       474 +  │ [Play/Pause] [Stop]    Playhead: 00:23 / 02:45                              │
+       475 +  ├──────────────────────────────────────────────────────────────────────────────┤
+       476 +  │ Microphone: [Select Device ▼]  |  Pitch: [C][C#][D][D#][E][F][F#][G][G#][A][A#][B] │
+       477 +  ├──────────────────────────────────────────────────────────────────────────────┤
+       478 +  │                                                                               │
+       479 +  │ ▼ Soprano (4 tracks)                                                         │
+       480 +  │   [×] S1 [S] [M] [====░░░░] ───/\|─/\───/\─ (playhead: |)                   │
+       481 +  │   [×] S2 [S] [M] [======░░] ──/\─|─/\──/\── (playhead: |)                   │
+       482 +  │   [×] S3 [S] [M] [===░░░░░] ───/\|──/\───/\ (playhead: |)                   │
+       483 +  │   [×] S4 [S] [M] [=====░░░] ──/\─|─/\──/\── (playhead: |)                   │
+       484 +  │   [+ Add Track]                                                               │
+       485 +  │                                                                               │
+       486 +  │ ▼ Alto (2 tracks)                                                            │
+       487 +  │   [×] A1 [S] [M] [====░░░░] ───/\|─/\───/\─                                 │
+       488 +  │   [×] A2 [S] [M] [======░░] ──/\─|─/\──/\──                                 │
+       489 +  │   [+ Add Track]                                                               │
+       490 +  │                                                                               │
+       491 +  │ ▶ Tenor (collapsed)                                                          │
+       492 +  │                                                                               │
+       493 +  │ ▶ Bass (collapsed)                                                           │
+       494 +  │                                                                               │
+       495 +  └──────────────────────────────────────────────────────────────────────────────┘
+       496    ```
+       497    
+       498    ### Component Breakdown
+
+⏺ Read(docs/DESIGN.md)
+  ⎿  Read 50 lines
+
+⏺ Update(docs/DESIGN.md)
+  ⎿  Updated docs/DESIGN.md with 7 additions                                           
+       515    - Dropdown showing available microphone devices
+       516    - Selected device persists for recording sessions
+       517    
+       518 +  **ToneGenerator**
+       519 +  - 12 tone buttons for chromatic scale (C4 to B4)
+       520 +  - Display note names on buttons (C, C#, D, D#, E, F, F#, G, G#, A, A#, B)
+       521 +  - Optional: Piano key visual styling
+       522 +  - Click/press to play tone, release/click again to stop
+       523 +  - Positioned to the right of microphone selector
+       524 +  
+       525    **TransportControl**
+       526    - Play/Pause button (single toggle button)
+       527    - Stop button
+
+⏺ Read(docs/DESIGN.md)
+  ⎿  Read 50 lines
+
+⏺ Update(docs/DESIGN.md)
+  ⎿  Updated docs/DESIGN.md with 2 additions                                        
+       621    │   ├── components/
+       622    │   │   ├── TopBar.tsx
+       623    │   │   ├── MicrophoneSelector.tsx
+       624 +  │   │   ├── ToneGenerator.tsx
+       625    │   │   ├── MetronomeControl.tsx
+       626    │   │   ├── TransportControl.tsx
+       627    │   │   ├── VoicePartSection.tsx
+     ...
+       632    │   │   ├── recorder.ts          # Recording logic + device management
+       633    │   │   ├── mixer.ts             # Mixing & playback
+       634    │   │   ├── metronome.ts         # Metronome timing
+       635 +  │   │   ├── toneGenerator.ts     # Pitch reference tone generation
+       636    │   │   ├── visualizer.ts        # Waveform generation + VU meter
+       637    │   │   └── exporter.ts          # WAV/MP3 export
+       638    │   ├── store/
+
+⏺ Update(docs/DESIGN.md)
+  ⎿  Updated docs/DESIGN.md with 1 addition                                               
+       586    **Component Tests (React Testing Library)**
+       587    - TopBar: New, Load, Delete Project, project name display
+       588    - MicrophoneSelector: device enumeration, selection
+       589 +  - ToneGenerator: tone playback, note buttons, stop on release/second click
+       590    - TrackRow: delete, solo, mute, volume, name editing
+       591    - VoicePartSection: collapse/expand, track management
+       592    - MetronomeControl: BPM adjustments (buttons & direct input), overdub toggle
+
+⏺ Read(docs/IMPLEMENTATION.md)
+  ⎿  Read 50 lines
+
+⏺ Update(docs/IMPLEMENTATION.md)
+  ⎿  Updated docs/IMPLEMENTATION.md with 13 additions and 1 removal                               
+       142    
+       143    **EARS Requirements:** MET-001, MET-002, MET-003, MET-004, MET-005, MET-006, MET-007
+       144    
+       145 -  ### 3.2 Recorder Module - Device Management
+       145 +  ### 3.2 ToneGenerator Module
+       146 +  - [ ] Write tests for tone generator initialization (TONE-001)
+       147 +  - [ ] Implement Tone.js oscillator setup
+       148 +  - [ ] Write tests for 12-tone chromatic scale (TONE-002)
+       149 +  - [ ] Implement frequency mapping for C4 (261.63 Hz) to B4 (493.88 Hz)
+       150 +  - [ ] Write tests for tone playback (TONE-004)
+       151 +  - [ ] Implement play tone on button press
+       152 +  - [ ] Write tests for tone stop (TONE-005)
+       153 +  - [ ] Implement stop tone on release or second click
+       154 +  
+       155 +  **EARS Requirements:** TONE-001, TONE-002, TONE-004, TONE-005
+       156 +  
+       157 +  ### 3.3 Recorder Module - Device Management
+       158    - [ ] Write tests for microphone enumeration (MIC-001)
+       159    - [ ] Implement navigator.mediaDevices.enumerateDevices()
+       160    - [ ] Write tests for microphone selection (MIC-002, MIC-003)
+
+⏺ Read(docs/IMPLEMENTATION.md)
+  ⎿  Read 100 lines
+
+⏺ Update(docs/IMPLEMENTATION.md)
+  ⎿  Updated docs/IMPLEMENTATION.md with 1 addition and 1 removal                        
+       166    
+       167    **EARS Requirements:** MIC-001, MIC-002, MIC-003, MIC-004, REC-001, ERR-001
+       168    
+       169 -  ### 3.3 Recorder Module - Recording Logic
+       169 +  ### 3.4 Recorder Module - Recording Logic
+       170    - [ ] Write tests for MediaRecorder setup (REC-003)
+       171    - [ ] Implement MediaRecorder with selected device
+       172    - [ ] Write tests for countdown (REC-002)
+
+⏺ Update(docs/IMPLEMENTATION.md)
+  ⎿  Updated docs/IMPLEMENTATION.md with 1 addition and 1 removal                                     
+       182    
+       183    **EARS Requirements:** REC-002, REC-003, REC-005, REC-006, REC-007, OVER-002, OVER-003, 
+             ERR-003
+       184    
+       185 -  ### 3.4 Visualizer Module - Waveform
+       185 +  ### 3.5 Visualizer Module - Waveform
+       186    - [ ] Write tests for waveform data generation (VIS-001, REC-008)
+       187    - [ ] Implement AnalyserNode-based waveform generation
+       188    - [ ] Write tests for sparkline rendering (VIS-002)
+
+⏺ Update(docs/IMPLEMENTATION.md)
+  ⎿  Updated docs/IMPLEMENTATION.md with 1 addition and 1 removal                
+       192    
+       193    **EARS Requirements:** VIS-001, VIS-002, VIS-004, REC-008, SEEK-004
+       194    
+       195 -  ### 3.5 Visualizer Module - VU Meter
+       195 +  ### 3.6 Visualizer Module - VU Meter
+       196    - [ ] Write tests for VU meter (MIC-005, REC-004, VIS-003)
+       197    - [ ] Implement real-time AnalyserNode for input monitoring
+       198    - [ ] Implement VU meter visualization
+
+⏺ Update(docs/IMPLEMENTATION.md)
+  ⎿  Updated docs/IMPLEMENTATION.md with 1 addition and 1 removal      
+       199    
+       200    **EARS Requirements:** MIC-005, REC-004, VIS-003
+       201    
+       202 -  ### 3.6 Mixer Module
+       202 +  ### 3.7 Mixer Module
+       203    - [ ] Write tests for track loading
+       204    - [ ] Implement audio buffer loading from IndexedDB blobs
+       205    - [ ] Write tests for GainNode creation
+
+⏺ Update(docs/IMPLEMENTATION.md)
+  ⎿  Updated docs/IMPLEMENTATION.md with 1 addition and 1 removal                                    
+       215    
+       216    **EARS Requirements:** TRACK-005, TRACK-006, TRACK-007, TRACK-008, PLAY-006, PLAY-007, 
+             PLAY-008
+       217    
+       218 -  ### 3.7 Exporter Module
+       218 +  ### 3.8 Exporter Module
+       219    - [ ] Write tests for mixing algorithm (EXP-001, EXP-004)
+       220    - [ ] Implement mix all non-muted tracks with volume levels
+       221    - [ ] Write tests for WAV export (EXP-002, EXP-003)
+
+⏺ Read(docs/IMPLEMENTATION.md)
+  ⎿  Read 50 lines
+
+⏺ Update(docs/IMPLEMENTATION.md)
+  ⎿  Updated docs/IMPLEMENTATION.md with 12 additions and 1 removal                    
+       266    
+       267    **EARS Requirements:** MIC-002, MIC-003
+       268    
+       269 -  ### 4.4 TransportControl Component
+       269 +  ### 4.4 ToneGenerator Component
+       270 +  - [ ] Write tests for tone generator UI (TONE-003, TONE-006)
+       271 +  - [ ] Implement 12 tone buttons (C, C#, D, D#, E, F, F#, G, G#, A, A#, B)
+       272 +  - [ ] Write tests for tone playback (TONE-004)
+       273 +  - [ ] Implement play tone on button press
+       274 +  - [ ] Write tests for tone stop (TONE-005)
+       275 +  - [ ] Implement stop tone on release or second click
+       276 +  - [ ] Optional: Implement piano key visual styling
+       277 +  
+       278 +  **EARS Requirements:** TONE-003, TONE-004, TONE-005, TONE-006
+       279 +  
+       280 +  ### 4.5 TransportControl Component
+       281    - [ ] Write tests for Play button (PLAY-001)
+       282    - [ ] Implement Play button
+       283    - [ ] Write tests for Pause button (PLAY-002)
+
+⏺ Update(docs/IMPLEMENTATION.md)
+  ⎿  Updated docs/IMPLEMENTATION.md with 1 addition and 1 removal          
+       289    
+       290    **EARS Requirements:** PLAY-001, PLAY-002, PLAY-003, PLAY-005
+       291    
+       292 -  ### 4.5 VoicePartSection Component
+       292 +  ### 4.6 VoicePartSection Component
+       293    - [ ] Write tests for voice part rendering (VOICE-001)
+       294    - [ ] Implement 4 voice part sections (S, A, T, B)
+       295    - [ ] Write tests for collapse/expand toggle (VOICE-002)
+
+⏺ Update(docs/IMPLEMENTATION.md)
+  ⎿  Updated docs/IMPLEMENTATION.md with 1 addition and 1 removal                       
+       303    
+       304    **EARS Requirements:** VOICE-001, VOICE-002, VOICE-003, VOICE-004, REC-001
+       305    
+       306 -  ### 4.6 TrackRow Component
+       306 +  ### 4.7 TrackRow Component
+       307    - [ ] Write tests for track controls layout (TRACK-011)
+       308    - [ ] Implement layout: [Delete] [Name] [Solo] [Mute] [Volume] [Sparkline]
+       309    - [ ] Write tests for Delete button (TRACK-001, TRACK-002)
+
+⏺ Read(docs/IMPLEMENTATION.md)
+  ⎿  Read 50 lines
+
+⏺ Update(docs/IMPLEMENTATION.md)
+  ⎿  Updated docs/IMPLEMENTATION.md with 1 addition and 1 removal                                     
+       321    
+       322    **EARS Requirements:** TRACK-001, TRACK-002, TRACK-005, TRACK-006, TRACK-008, TRACK-009,
+              TRACK-010, TRACK-011
+       323    
+       324 -  ### 4.7 Waveform Component
+       324 +  ### 4.8 Waveform Component
+       325    - [ ] Write tests for sparkline rendering (VIS-002)
+       326    - [ ] Implement sparkline canvas/SVG rendering
+       327    - [ ] Write tests for playhead indicator (VIS-004, SEEK-004)
+
+⏺ Update(docs/IMPLEMENTATION.md)
+  ⎿  Updated docs/IMPLEMENTATION.md with 1 addition and 1 removal                            
+       335    
+       336    **EARS Requirements:** VIS-002, VIS-004, SEEK-001, SEEK-002, SEEK-003, SEEK-004
+       337    
+       338 -  ### 4.8 VUMeter Component
+       338 +  ### 4.9 VUMeter Component
+       339    - [ ] Write tests for VU meter display (MIC-005, REC-004)
+       340    - [ ] Implement VU meter bar/line visualization
+       341    - [ ] Write tests for VU meter replaces sparkline (VIS-003)
+
+⏺ Read(docs/IMPLEMENTATION.md)
+  ⎿  Read 100 lines
+
+⏺ Read(docs/IMPLEMENTATION.md)
+  ⎿  Read 46 lines
+
+⏺ Update(docs/IMPLEMENTATION.md)
+  ⎿  Updated docs/IMPLEMENTATION.md with 8 additions                               
+       591    - [ ] OVER-003: Play non-muted tracks when overdub enabled
+       592    - [ ] OVER-004: Save overdub setting with project
+       593    
+       594 +  ### Tone Generator (Pitch Reference)
+       595 +  - [ ] TONE-001: Provide tone generator for pitch reference
+       596 +  - [ ] TONE-002: 12 chromatic tones from C4 to B4 (includes A440)
+       597 +  - [ ] TONE-003: Display tone controls to right of microphone selector
+       598 +  - [ ] TONE-004: Play tone on button click/press
+       599 +  - [ ] TONE-005: Stop tone on release or second click
+       600 +  - [ ] TONE-006: UI renders as piano keys OR labeled buttons
+       601 +  
+       602    ### Error Handling
+       603    - [ ] ERR-001: Display error on mic permission denied
+       604    - [ ] ERR-002: Notify on storage quota exceeded
+
+⏺ Update(docs/IMPLEMENTATION.md)
+  ⎿  Updated docs/IMPLEMENTATION.md with 2 additions and 2 removals              
+       608    
+       609    ## Progress Tracking
+       610    
+       611 -  **Total EARS Requirements:** 76
+       611 +  **Total EARS Requirements:** 82
+       612    **Completed:** 0
+       613 -  **Remaining:** 76
+       613 +  **Remaining:** 82
+       614    
+       615    Update this section as you complete requirements to track progress.
+       616    
+
+⏺ Perfect! I've added the tone generator feature to both design documents. Here's what's been updated:
+
+  docs/DESIGN.md - Updates
+
+  Added ToneGenerator Module:
+  - 12-tone chromatic scale from C4 (261.63 Hz) to B4 (493.88 Hz), including A440
+  - Positioned to the right of microphone selector
+  - Play tone on click/press, stop on release or second click
+  - Optional piano key visual styling
+
+  6 New EARS Requirements (TONE-001 through TONE-006):
+  - TONE-001: Provide tone generator for pitch reference
+  - TONE-002: 12 chromatic tones (C4 to B4, includes A440)
+  - TONE-003: Display to right of microphone selector
+  - TONE-004: Play tone on button click/press
+  - TONE-005: Stop tone on release or second click
+  - TONE-006: Render as piano keys OR labeled note buttons
+
+  Updated UI Layout:
+  │ Microphone: [Select Device ▼]  |  Pitch: [C][C#][D][D#][E][F][F#][G][G#][A][A#][B] │
+
+  Added Components:
+  - ToneGenerator.tsx - UI component
+  - toneGenerator.ts - Audio engine module using Tone.js oscillators
+
+  docs/IMPLEMENTATION.md - Updates
+
+  Phase 3.2: ToneGenerator Module (8 tasks)
+  - Tests for initialization, 12-tone scale, playback, stop behavior
+  - Tone.js oscillator setup and frequency mapping
+
+  Phase 4.4: ToneGenerator Component (7 tasks)
+  - UI with 12 tone buttons (note names)
+  - Click/press to play, release/click to stop
+  - Optional piano key styling
+
+  EARS Coverage Checklist:
+  - Added 6 TONE requirements to checklist
+  - Updated total: 82 EARS requirements (was 76)
+
+  The tone generator will give you a chromatic octave (C-B) with A440 in the middle - perfect for finding
+   your starting pitch! Ready to begin Phase 1 implementation?
+
+> Great! Now let's also write a project CLAUDE.md. Let's be sure to remind ourselves in particular to use
+ a red-green-refactor loop for all new development, to always use EARS specs to track requirements, and 
+to always add comments in the code for the EARS requirement that the code is being written for, so that 
+we can trace expectations & requirements through the system. 
+
+⏺ Perfect! Let me create a comprehensive CLAUDE.md file for this project with those key reminders.
+
+⏺ Write(CLAUDE.md)
+  ⎿  Wrote 601 lines to CLAUDE.md                                                                       
+     # CLAUDE.md
+     This file provides guidance to Claude Code (claude.ai/code) when working with code in this
+     repository.
+     ## Project Overview
+     **SATB Harmony Recorder** - A browser-based single-page application for recording multi-track vocal
+     harmonies (Soprano, Alto, Tenor, Bass). Users can record multiple takes per voice part, overdub, mix
+      with individual track controls, and export as WAV/MP3.
+     **Tech Stack:**
+     - Vite + React 18 + TypeScript
+     … +591 lines (ctrl+o to expand)
+
+⏺ Perfect! I've created a comprehensive CLAUDE.md file that emphasizes the three critical principles you
+  requested:
+
+  Key Highlights:
+
+  1. Red-Green-Refactor Loop - MANDATORY
+
+  - Clear 3-step process with "No exceptions" policy
+  - Multiple code examples showing the complete TDD workflow
+  - Explicit reminder to write tests FIRST
+
+  2. EARS Requirements Tracking
+
+  - Lists all 82 requirements across 11 categories
+  - Shows how to reference EARS IDs in test names
+  - Includes implementation checklist references
+
+  3. Code Comments for Traceability
+
+  - Mandatory format: // [EARS: SPEC-ID] Brief description
+  - Extensive examples throughout the document:
+  // [EARS: REC-001] Request microphone permissions
+  async function requestMicrophone() { ... }
+
+  // [EARS: TRACK-007] Mute flag preserves volume/GainNode
+  const applyMute = (track: Track, gainNode: GainNode) { ... }
+  - Explains WHY this matters (future developers, debugging, impact analysis)
+
+  Other Important Sections:
+
+  - Complete TDD Example - Shows red-green-refactor for MET-003 (BPM input)
+  - Project-Specific Patterns - Auto-save, mute as boolean, overdub toggle, tone frequencies
+  - Test Naming Convention - Include EARS IDs in test descriptions
+  - Pre-Commit Checklist - Ensures nothing gets committed without tests and EARS comments
+  - DO/DON'T Lists - Quick reference for key practices
+
+  The document is practical and code-heavy with real examples from this project. Every code snippet shows
+   proper EARS comment usage!
+
+  Ready to begin Phase 1: Project Setup & Foundation? 🚀
+
+
+

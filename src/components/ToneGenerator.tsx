@@ -26,6 +26,17 @@ const TONES: ToneButton[] = [
   { label: 'B', note: 'B4', isBlackKey: false },
 ];
 
+/**
+ * Convert note name to semitone index (0-11)
+ */
+function noteToSemitone(note: ToneNote): number {
+  const noteMap: Record<ToneNote, number> = {
+    'C4': 0, 'C#4': 1, 'D4': 2, 'D#4': 3, 'E4': 4, 'F4': 5,
+    'F#4': 6, 'G4': 7, 'G#4': 8, 'A4': 9, 'A#4': 10, 'B4': 11,
+  };
+  return noteMap[note];
+}
+
 export function ToneGenerator() {
   const [activeTone, setActiveTone] = useState<ToneNote | null>(null);
 
@@ -43,7 +54,7 @@ export function ToneGenerator() {
     // Cleanup on unmount
     return () => {
       if (toneGeneratorRef.current) {
-        toneGeneratorRef.current.stopTone();
+        toneGeneratorRef.current.stop();
         toneGeneratorRef.current.dispose();
       }
       if (audioContextRef.current) {
@@ -62,14 +73,14 @@ export function ToneGenerator() {
 
     if (activeTone === note) {
       // Same button clicked - stop tone
-      toneGeneratorRef.current.stopTone();
+      toneGeneratorRef.current.stop();
       setActiveTone(null);
     } else {
       // Different button clicked - stop previous and play new
       if (activeTone) {
-        toneGeneratorRef.current.stopTone();
+        toneGeneratorRef.current.stop();
       }
-      toneGeneratorRef.current.playTone(note);
+      toneGeneratorRef.current.play(noteToSemitone(note));
       setActiveTone(note);
     }
   };

@@ -18,8 +18,8 @@ describe('MET-003: BPM input field', () => {
 
   beforeEach(() => {
     mockMetronome = {
-      setBPM: vi.fn(),
-      getBPM: vi.fn().mockReturnValue(120),
+      setBpm: vi.fn(),
+      getBpm: vi.fn().mockReturnValue(120),
       start: vi.fn(),
       stop: vi.fn(),
       isPlaying: vi.fn().mockReturnValue(false),
@@ -51,7 +51,7 @@ describe('MET-003: BPM input field', () => {
     fireEvent.change(input, { target: { value: '140' } });
 
     await waitFor(() => {
-      expect(mockMetronome.setBPM).toHaveBeenCalledWith(140);
+      expect(mockMetronome.setBpm).toHaveBeenCalledWith(140);
     });
   });
 
@@ -62,12 +62,12 @@ describe('MET-003: BPM input field', () => {
 
     fireEvent.change(input, { target: { value: '40' } });
     await waitFor(() => {
-      expect(mockMetronome.setBPM).toHaveBeenCalledWith(40);
+      expect(mockMetronome.setBpm).toHaveBeenCalledWith(40);
     });
 
     fireEvent.change(input, { target: { value: '240' } });
     await waitFor(() => {
-      expect(mockMetronome.setBPM).toHaveBeenCalledWith(240);
+      expect(mockMetronome.setBpm).toHaveBeenCalledWith(240);
     });
   });
 
@@ -81,7 +81,7 @@ describe('MET-003: BPM input field', () => {
 
     await waitFor(() => {
       expect(input).toHaveValue(40);
-      expect(mockMetronome.setBPM).toHaveBeenCalledWith(40);
+      expect(mockMetronome.setBpm).toHaveBeenCalledWith(40);
     });
   });
 
@@ -94,12 +94,12 @@ describe('MET-003: BPM input field', () => {
 
     await waitFor(() => {
       expect(input).toHaveValue(240);
-      expect(mockMetronome.setBPM).toHaveBeenCalledWith(240);
+      expect(mockMetronome.setBpm).toHaveBeenCalledWith(240);
     });
   });
 
   test('handles invalid input gracefully', async () => {
-    mockMetronome.getBPM.mockReturnValue(120);
+    mockMetronome.getBpm.mockReturnValue(120);
     render(<MetronomeControl />);
 
     const input = screen.getByRole('spinbutton', { name: /bpm/i });
@@ -117,8 +117,8 @@ describe('MET-002: BPM increment/decrement buttons', () => {
 
   beforeEach(() => {
     mockMetronome = {
-      setBPM: vi.fn(),
-      getBPM: vi.fn().mockReturnValue(120),
+      setBpm: vi.fn(),
+      getBpm: vi.fn().mockReturnValue(120),
       start: vi.fn(),
       stop: vi.fn(),
       isPlaying: vi.fn().mockReturnValue(false),
@@ -143,26 +143,26 @@ describe('MET-002: BPM increment/decrement buttons', () => {
   });
 
   test('increments BPM by 1 on increment button click', async () => {
-    mockMetronome.getBPM.mockReturnValue(120);
+    mockMetronome.getBpm.mockReturnValue(120);
     render(<MetronomeControl />);
 
     const incrementButton = screen.getByRole('button', { name: /increment|[+]/i });
     fireEvent.click(incrementButton);
 
     await waitFor(() => {
-      expect(mockMetronome.setBPM).toHaveBeenCalledWith(121);
+      expect(mockMetronome.setBpm).toHaveBeenCalledWith(121);
     });
   });
 
   test('decrements BPM by 1 on decrement button click', async () => {
-    mockMetronome.getBPM.mockReturnValue(120);
+    mockMetronome.getBpm.mockReturnValue(120);
     render(<MetronomeControl />);
 
     const decrementButton = screen.getByRole('button', { name: /decrement|[-]/i });
     fireEvent.click(decrementButton);
 
     await waitFor(() => {
-      expect(mockMetronome.setBPM).toHaveBeenCalledWith(119);
+      expect(mockMetronome.setBpm).toHaveBeenCalledWith(119);
     });
   });
 
@@ -177,12 +177,12 @@ describe('MET-002: BPM increment/decrement buttons', () => {
     fireEvent.change(input, { target: { value: '240' } });
 
     // Clear previous calls
-    mockMetronome.setBPM.mockClear();
+    mockMetronome.setBpm.mockClear();
 
     // Try to increment beyond max
     fireEvent.click(incrementButton);
 
-    expect(mockMetronome.setBPM).not.toHaveBeenCalled();
+    expect(mockMetronome.setBpm).not.toHaveBeenCalled();
   });
 
   test('does not decrement below minimum BPM (40)', async () => {
@@ -195,12 +195,12 @@ describe('MET-002: BPM increment/decrement buttons', () => {
     fireEvent.change(input, { target: { value: '40' } });
 
     // Clear previous calls
-    mockMetronome.setBPM.mockClear();
+    mockMetronome.setBpm.mockClear();
 
     // Try to decrement below min
     fireEvent.click(decrementButton);
 
-    expect(mockMetronome.setBPM).not.toHaveBeenCalled();
+    expect(mockMetronome.setBpm).not.toHaveBeenCalled();
   });
 
   test('increment button disabled at max BPM', () => {
@@ -233,8 +233,8 @@ describe('MET-005: Visual flash indicator', () => {
 
   beforeEach(() => {
     mockMetronome = {
-      setBPM: vi.fn(),
-      getBPM: vi.fn().mockReturnValue(120),
+      setBpm: vi.fn(),
+      getBpm: vi.fn().mockReturnValue(120),
       start: vi.fn(),
       stop: vi.fn(),
       isPlaying: vi.fn().mockReturnValue(false),
@@ -350,8 +350,8 @@ describe('OVER-001: Overdub toggle', () => {
 
   beforeEach(() => {
     mockMetronome = {
-      setBPM: vi.fn(),
-      getBPM: vi.fn().mockReturnValue(120),
+      setBpm: vi.fn(),
+      getBpm: vi.fn().mockReturnValue(120),
       start: vi.fn(),
       stop: vi.fn(),
       isPlaying: vi.fn().mockReturnValue(false),
@@ -406,8 +406,8 @@ describe('MetronomeControl: Component lifecycle', () => {
 
   beforeEach(() => {
     mockMetronome = {
-      setBPM: vi.fn(),
-      getBPM: vi.fn().mockReturnValue(120),
+      setBpm: vi.fn(),
+      getBpm: vi.fn().mockReturnValue(120),
       start: vi.fn(),
       stop: vi.fn(),
       isPlaying: vi.fn().mockReturnValue(false),
@@ -427,9 +427,7 @@ describe('MetronomeControl: Component lifecycle', () => {
   test('creates Metronome instance on mount', () => {
     render(<MetronomeControl />);
 
-    expect(Metronome).toHaveBeenCalledWith(expect.objectContaining({
-      close: expect.any(Function),
-    }));
+    expect(Metronome).toHaveBeenCalledWith(120); // Initial BPM = 120
   });
 
   test('disposes metronome on unmount', () => {
@@ -438,20 +436,5 @@ describe('MetronomeControl: Component lifecycle', () => {
     unmount();
 
     expect(mockMetronome.dispose).toHaveBeenCalled();
-  });
-
-  test('cleans up audio context on unmount', () => {
-    // Track which AudioContext was created
-    let createdAudioContext: any = null;
-    (global.AudioContext as any).mockImplementationOnce(function() {
-      createdAudioContext = { ...mockAudioContext };
-      return createdAudioContext;
-    });
-
-    const { unmount } = render(<MetronomeControl />);
-
-    unmount();
-
-    expect(createdAudioContext.close).toHaveBeenCalled();
   });
 });

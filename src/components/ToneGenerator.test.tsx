@@ -20,8 +20,8 @@ describe('TONE-003, TONE-006: Tone generator UI', () => {
 
   beforeEach(() => {
     mockToneGenerator = {
-      playTone: vi.fn(),
-      stopTone: vi.fn(),
+      play: vi.fn(),
+      stop: vi.fn(),
       dispose: vi.fn(),
     };
     vi.mocked(ToneGenerator).mockImplementation(function() {
@@ -64,8 +64,8 @@ describe('TONE-004: Play tone on button press', () => {
 
   beforeEach(() => {
     mockToneGenerator = {
-      playTone: vi.fn(),
-      stopTone: vi.fn(),
+      play: vi.fn(),
+      stop: vi.fn(),
       dispose: vi.fn(),
     };
     vi.mocked(ToneGenerator).mockImplementation(function() {
@@ -84,32 +84,22 @@ describe('TONE-004: Play tone on button press', () => {
     const cButton = screen.getByRole('button', { name: 'C' });
     fireEvent.click(cButton);
 
-    expect(mockToneGenerator.playTone).toHaveBeenCalledWith('C4');
+    expect(mockToneGenerator.play).toHaveBeenCalledWith(0); // C = semitone 0
   });
 
   test('plays correct tone for each button', () => {
     render(<ToneGeneratorComponent />);
 
-    const toneMap = {
-      'C': 'C4',
-      'C#': 'C#4',
-      'D': 'D4',
-      'D#': 'D#4',
-      'E': 'E4',
-      'F': 'F4',
-      'F#': 'F#4',
-      'G': 'G4',
-      'G#': 'G#4',
-      'A': 'A4',
-      'A#': 'A#4',
-      'B': 'B4',
+    const toneMap: Record<string, number> = {
+      'C': 0, 'C#': 1, 'D': 2, 'D#': 3, 'E': 4, 'F': 5,
+      'F#': 6, 'G': 7, 'G#': 8, 'A': 9, 'A#': 10, 'B': 11,
     };
 
-    Object.entries(toneMap).forEach(([label, note]) => {
-      mockToneGenerator.playTone.mockClear();
+    Object.entries(toneMap).forEach(([label, semitone]) => {
+      mockToneGenerator.play.mockClear();
       const button = screen.getByRole('button', { name: label });
       fireEvent.click(button);
-      expect(mockToneGenerator.playTone).toHaveBeenCalledWith(note);
+      expect(mockToneGenerator.play).toHaveBeenCalledWith(semitone);
     });
   }, 10000); // Increase timeout for testing all 12 buttons
 
@@ -118,13 +108,13 @@ describe('TONE-004: Play tone on button press', () => {
 
     const cButton = screen.getByRole('button', { name: 'C' });
     fireEvent.click(cButton);
-    expect(mockToneGenerator.playTone).toHaveBeenCalledWith('C4');
+    expect(mockToneGenerator.play).toHaveBeenCalledWith(0); // C = semitone 0
 
-    mockToneGenerator.playTone.mockClear();
+    mockToneGenerator.play.mockClear();
 
     const gButton = screen.getByRole('button', { name: 'G' });
     fireEvent.click(gButton);
-    expect(mockToneGenerator.playTone).toHaveBeenCalledWith('G4');
+    expect(mockToneGenerator.play).toHaveBeenCalledWith(7); // G = semitone 7
   });
 });
 
@@ -133,8 +123,8 @@ describe('TONE-005: Stop tone on release or second click', () => {
 
   beforeEach(() => {
     mockToneGenerator = {
-      playTone: vi.fn(),
-      stopTone: vi.fn(),
+      play: vi.fn(),
+      stop: vi.fn(),
       dispose: vi.fn(),
     };
     vi.mocked(ToneGenerator).mockImplementation(function() {
@@ -154,11 +144,11 @@ describe('TONE-005: Stop tone on release or second click', () => {
 
     // First click - play
     fireEvent.click(cButton);
-    expect(mockToneGenerator.playTone).toHaveBeenCalledWith('C4');
+    expect(mockToneGenerator.play).toHaveBeenCalledWith(0); // C = semitone 0
 
     // Second click - stop
     fireEvent.click(cButton);
-    expect(mockToneGenerator.stopTone).toHaveBeenCalled();
+    expect(mockToneGenerator.stop).toHaveBeenCalled();
   });
 
   test('stops previous tone when different button clicked', () => {
@@ -169,12 +159,12 @@ describe('TONE-005: Stop tone on release or second click', () => {
 
     // Play C
     fireEvent.click(cButton);
-    expect(mockToneGenerator.playTone).toHaveBeenCalledWith('C4');
+    expect(mockToneGenerator.play).toHaveBeenCalledWith(0); // C = semitone 0
 
     // Play G - should stop C first
     fireEvent.click(gButton);
-    expect(mockToneGenerator.stopTone).toHaveBeenCalled();
-    expect(mockToneGenerator.playTone).toHaveBeenCalledWith('G4');
+    expect(mockToneGenerator.stop).toHaveBeenCalled();
+    expect(mockToneGenerator.play).toHaveBeenCalledWith(7); // G = semitone 7
   });
 
   test('button shows active state when tone is playing', () => {
@@ -271,6 +261,6 @@ describe('ToneGenerator: Component lifecycle', () => {
     // Unmount - should stop tone
     unmount();
 
-    expect(mockToneGenerator.stopTone).toHaveBeenCalled();
+    expect(mockToneGenerator.stop).toHaveBeenCalled();
   });
 });

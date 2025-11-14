@@ -14,7 +14,6 @@ export function MetronomeControl() {
   const [overdubEnabled, setOverdubEnabled] = useState(false);
 
   const metronomeRef = useRef<Metronome | null>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
   const flashTimeoutRef = useRef<number | null>(null);
 
   /**
@@ -22,9 +21,7 @@ export function MetronomeControl() {
    * [EARS: MET-003] Set up metronome with default BPM
    */
   useEffect(() => {
-    audioContextRef.current = new AudioContext();
-    metronomeRef.current = new Metronome(audioContextRef.current);
-    metronomeRef.current.setBPM(bpm);
+    metronomeRef.current = new Metronome(bpm);
 
     /**
      * Visual callback for metronome beats
@@ -54,9 +51,6 @@ export function MetronomeControl() {
       if (metronomeRef.current) {
         metronomeRef.current.dispose();
       }
-      if (audioContextRef.current) {
-        audioContextRef.current.close();
-      }
     };
   }, []);
 
@@ -66,7 +60,7 @@ export function MetronomeControl() {
    */
   useEffect(() => {
     if (metronomeRef.current) {
-      metronomeRef.current.setBPM(bpm);
+      metronomeRef.current.setBpm(bpm);
     }
   }, [bpm]);
 

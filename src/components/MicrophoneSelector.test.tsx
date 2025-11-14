@@ -26,7 +26,7 @@ describe('MIC-002: Device enumeration display', () => {
         { deviceId: 'mic-2', label: 'USB Microphone' },
         { deviceId: 'mic-3', label: 'Bluetooth Headset' },
       ]),
-      getSelectedDevice: vi.fn().mockReturnValue(null),
+      getSelectedDeviceId: vi.fn().mockReturnValue(null),
       selectDevice: vi.fn(),
       requestPermission: vi.fn(),
       dispose: vi.fn(),
@@ -133,7 +133,7 @@ describe('MIC-003: Device selection', () => {
         { deviceId: 'mic-1', label: 'Built-in Microphone' },
         { deviceId: 'mic-2', label: 'USB Microphone' },
       ]),
-      getSelectedDevice: vi.fn().mockReturnValue(null),
+      getSelectedDeviceId: vi.fn().mockReturnValue(null),
       selectDevice: vi.fn(),
       requestPermission: vi.fn(),
       dispose: vi.fn(),
@@ -162,7 +162,7 @@ describe('MIC-003: Device selection', () => {
   });
 
   test('displays selected device', async () => {
-    mockRecorder.getSelectedDevice.mockReturnValue('mic-2');
+    mockRecorder.getSelectedDeviceId.mockReturnValue('mic-2');
 
     render(<MicrophoneSelector />);
 
@@ -217,7 +217,7 @@ describe('MIC-002: Refresh devices', () => {
       enumerateDevices: vi.fn().mockResolvedValue([
         { deviceId: 'mic-1', label: 'Built-in Microphone' },
       ]),
-      getSelectedDevice: vi.fn().mockReturnValue(null),
+      getSelectedDeviceId: vi.fn().mockReturnValue(null),
       selectDevice: vi.fn(),
       requestPermission: vi.fn(),
       dispose: vi.fn(),
@@ -285,7 +285,7 @@ describe('MicrophoneSelector: Component lifecycle', () => {
   beforeEach(() => {
     mockRecorder = {
       enumerateDevices: vi.fn().mockResolvedValue([]),
-      getSelectedDevice: vi.fn().mockReturnValue(null),
+      getSelectedDeviceId: vi.fn().mockReturnValue(null),
       selectDevice: vi.fn(),
       requestPermission: vi.fn(),
       dispose: vi.fn(),

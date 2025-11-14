@@ -54,7 +54,7 @@ export function MicrophoneSelector() {
       setDevices(deviceList);
 
       // Check if there's already a selected device
-      const currentDevice = recorderRef.current.getSelectedDevice();
+      const currentDevice = recorderRef.current.getSelectedDeviceId();
       if (currentDevice) {
         setSelectedDeviceId(currentDevice);
       }

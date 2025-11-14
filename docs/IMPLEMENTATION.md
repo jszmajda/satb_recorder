@@ -601,15 +601,15 @@ This document outlines the implementation phases and tasks for building the SATB
 - Converts to WAV blob on stop
 - Coordinates metronome start/stop with recording
 
-**Integration Tests:** 19 tests (3 passing, 16 require further timing mock adjustments)
-- REC-001: Microphone permission (3 tests - all passing)
+**Integration Tests:** 19 tests (all passing ✅)
+- REC-001: Microphone permission (3 tests)
 - REC-002: Countdown display (3 tests)
 - REC-003: Metronome/recorder start (3 tests)
 - REC-004: VU meter display (3 tests)
 - REC-007: WAV conversion (3 tests)
 - Component states (4 tests)
 
-**Note:** Individual components (Recorder, Metronome, VUMeter) have comprehensive unit tests (557 total passing). Integration tests demonstrate workflow but need timing adjustments for full test suite pass.
+**Test Status:** All integration tests green and reliable using act() with fake timers. Individual components (Recorder, Metronome, VUMeter) also have comprehensive unit tests. Total: 576 tests passing.
 
 **Files:**
 - `src/components/RecordButton.tsx` - Recording workflow orchestration

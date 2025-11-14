@@ -146,13 +146,32 @@ beforeAll(() => {
   global.URL.createObjectURL = vi.fn().mockReturnValue('blob:mock-url');
   global.URL.revokeObjectURL = vi.fn();
 
-  // Mock Blob
-  global.Blob = vi.fn().mockImplementation((parts: any[], options: { type?: string }) => ({
-    size: parts?.reduce((acc: number, part: any) => acc + (part?.length || 0), 0) || 0,
-    type: options?.type || '',
-    arrayBuffer: vi.fn().mockResolvedValue(new ArrayBuffer(0)),
-    slice: vi.fn(),
-    stream: vi.fn(),
-    text: vi.fn().mockResolvedValue(''),
-  })) as any;
+  // Mock Blob - methods on prototype to avoid cloning issues in IndexedDB
+  class MockBlob {
+    size: number;
+    type: string;
+
+    constructor(parts?: any[], options?: { type?: string }) {
+      this.size = parts?.reduce((acc: number, part: any) => acc + (part?.length || 0), 0) || 0;
+      this.type = options?.type || '';
+    }
+  }
+
+  MockBlob.prototype.arrayBuffer = async function (): Promise<ArrayBuffer> {
+    return new ArrayBuffer(0);
+  };
+
+  MockBlob.prototype.slice = function (): Blob {
+    return new MockBlob();
+  };
+
+  MockBlob.prototype.stream = function () {
+    return {};
+  };
+
+  MockBlob.prototype.text = async function (): Promise<string> {
+    return '';
+  };
+
+  global.Blob = MockBlob as any;
 });

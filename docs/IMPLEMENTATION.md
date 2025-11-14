@@ -190,16 +190,20 @@ This document outlines the implementation phases and tasks for building the SATB
 **Completed:** 2025-11-14
 
 ### 3.3 Recorder Module - Device Management
-- [ ] Write tests for microphone enumeration (MIC-001)
-- [ ] Implement navigator.mediaDevices.enumerateDevices()
-- [ ] Write tests for microphone selection (MIC-002, MIC-003)
-- [ ] Implement microphone device selection
-- [ ] Write tests for permission handling (MIC-004, REC-001)
-- [ ] Implement microphone permission request
-- [ ] Write tests for permission denied error (ERR-001)
-- [ ] Implement error handling for denied permissions
+- [x] Write tests for microphone enumeration (MIC-001)
+- [x] Implement navigator.mediaDevices.enumerateDevices()
+- [x] Write tests for microphone selection (MIC-002, MIC-003)
+- [x] Implement microphone device selection
+- [x] Write tests for permission handling (MIC-004, REC-001)
+- [x] Implement microphone permission request
+- [x] Write tests for permission denied error (ERR-001)
+- [x] Implement error handling for denied permissions
 
 **EARS Requirements:** MIC-001, MIC-002, MIC-003, MIC-004, REC-001, ERR-001
+
+**Test Coverage:** 25 tests in src/audio/recorder.test.ts
+
+**Completed:** 2025-11-14
 
 ### 3.4 Recorder Module - Recording Logic
 - [ ] Write tests for MediaRecorder setup (REC-003)

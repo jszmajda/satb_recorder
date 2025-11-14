@@ -227,15 +227,21 @@ This document outlines the implementation phases and tasks for building the SATB
 
 **Note:** Overdub features (REC-005, REC-006, OVER-002, OVER-003) require UI integration and will be implemented in the component layer.
 
-### 3.5 Visualizer Module - Waveform
-- [ ] Write tests for waveform data generation (VIS-001, REC-008)
-- [ ] Implement AnalyserNode-based waveform generation
-- [ ] Write tests for sparkline rendering (VIS-002)
-- [ ] Implement sparkline visualization (100-200 data points)
-- [ ] Write tests for playhead indicator (VIS-004, SEEK-004)
-- [ ] Implement playhead visual on sparklines
+### 3.5 Visualizer Module - Waveform ✅
+- [x] Write tests for waveform data generation (VIS-001, REC-008)
+- [x] Implement waveform generation from audio blobs
+- [ ] Write tests for sparkline rendering (VIS-002) - Deferred to UI integration phase
+- [ ] Implement sparkline visualization component - Deferred to UI integration phase
+- [ ] Write tests for playhead indicator (VIS-004, SEEK-004) - Deferred to UI integration phase
+- [ ] Implement playhead visual on sparklines - Deferred to UI integration phase
 
-**EARS Requirements:** VIS-001, VIS-002, VIS-004, REC-008, SEEK-004
+**EARS Requirements:** VIS-001, REC-008 (VIS-002, VIS-004, SEEK-004 deferred to UI phase)
+
+**Test Coverage:** 16 tests in src/audio/visualizer.test.ts
+
+**Completed:** 2025-11-14
+
+**Note:** Sparkline rendering and playhead visualization require UI components and will be implemented in the component layer.
 
 ### 3.6 Visualizer Module - VU Meter
 - [ ] Write tests for VU meter (MIC-005, REC-004, VIS-003)

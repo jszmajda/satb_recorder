@@ -108,70 +108,82 @@ vi.mock('tone', () => {
 // Mock Web Audio API
 beforeAll(() => {
   // Mock AudioContext
-  global.AudioContext = vi.fn().mockImplementation(() => ({
-    createGain: vi.fn().mockReturnValue({
-      gain: {
-        value: 1,
-        setValueAtTime: vi.fn(),
-        linearRampToValueAtTime: vi.fn(),
-        exponentialRampToValueAtTime: vi.fn(),
+  global.AudioContext = vi.fn().mockImplementation(function(this: any) {
+    return {
+      createGain: vi.fn().mockReturnValue({
+        gain: {
+          value: 1,
+          setValueAtTime: vi.fn(),
+          linearRampToValueAtTime: vi.fn(),
+          exponentialRampToValueAtTime: vi.fn(),
+        },
+        connect: vi.fn(),
+        disconnect: vi.fn(),
+      }),
+      createAnalyser: vi.fn().mockReturnValue({
+        fftSize: 2048,
+        frequencyBinCount: 1024,
+        getByteFrequencyData: vi.fn(),
+        getByteTimeDomainData: vi.fn(),
+        connect: vi.fn(),
+        disconnect: vi.fn(),
+      }),
+      createOscillator: vi.fn().mockReturnValue({
+        frequency: {
+          value: 440,
+          setValueAtTime: vi.fn(),
+        },
+        type: 'sine',
+        start: vi.fn(),
+        stop: vi.fn(),
+        connect: vi.fn(),
+        disconnect: vi.fn(),
+      }),
+      createMediaStreamSource: vi.fn().mockReturnValue({
+        connect: vi.fn(),
+        disconnect: vi.fn(),
+      }),
+      createMediaStreamDestination: vi.fn().mockReturnValue({
+        stream: {},
+        connect: vi.fn(),
+        disconnect: vi.fn(),
+      }),
+      createBufferSource: vi.fn().mockReturnValue({
+        buffer: null,
+        start: vi.fn(),
+        stop: vi.fn(),
+        connect: vi.fn(),
+        disconnect: vi.fn(),
+      }),
+      decodeAudioData: vi.fn().mockImplementation(async () => {
+        // Generate mock audio data with some variation
+        const length = 44100;
+        const channelData = new Float32Array(length);
+        for (let i = 0; i < length; i++) {
+          // Generate a simple sine wave pattern
+          channelData[i] = Math.sin(i / 100) * 0.5;
+        }
+
+        return {
+          duration: 1.0,
+          length,
+          numberOfChannels: 2,
+          sampleRate: 44100,
+          getChannelData: (channel: number) => channelData,
+        };
+      }),
+      destination: {
+        channelCount: 2,
+        maxChannelCount: 2,
       },
-      connect: vi.fn(),
-      disconnect: vi.fn(),
-    }),
-    createAnalyser: vi.fn().mockReturnValue({
-      fftSize: 2048,
-      frequencyBinCount: 1024,
-      getByteFrequencyData: vi.fn(),
-      getByteTimeDomainData: vi.fn(),
-      connect: vi.fn(),
-      disconnect: vi.fn(),
-    }),
-    createOscillator: vi.fn().mockReturnValue({
-      frequency: {
-        value: 440,
-        setValueAtTime: vi.fn(),
-      },
-      type: 'sine',
-      start: vi.fn(),
-      stop: vi.fn(),
-      connect: vi.fn(),
-      disconnect: vi.fn(),
-    }),
-    createMediaStreamSource: vi.fn().mockReturnValue({
-      connect: vi.fn(),
-      disconnect: vi.fn(),
-    }),
-    createMediaStreamDestination: vi.fn().mockReturnValue({
-      stream: {},
-      connect: vi.fn(),
-      disconnect: vi.fn(),
-    }),
-    createBufferSource: vi.fn().mockReturnValue({
-      buffer: null,
-      start: vi.fn(),
-      stop: vi.fn(),
-      connect: vi.fn(),
-      disconnect: vi.fn(),
-    }),
-    decodeAudioData: vi.fn().mockResolvedValue({
-      duration: 1.0,
-      length: 44100,
-      numberOfChannels: 2,
       sampleRate: 44100,
-      getChannelData: vi.fn().mockReturnValue(new Float32Array(44100)),
-    }),
-    destination: {
-      channelCount: 2,
-      maxChannelCount: 2,
-    },
-    sampleRate: 44100,
-    currentTime: 0,
-    state: 'running',
-    suspend: vi.fn(),
-    resume: vi.fn(),
-    close: vi.fn(),
-  })) as any;
+      currentTime: 0,
+      state: 'running',
+      suspend: vi.fn(),
+      resume: vi.fn(),
+      close: vi.fn(),
+    };
+  }) as any;
 
   // Mock MediaRecorder
   global.MediaRecorder = vi.fn().mockImplementation(function(this: any) {
@@ -285,23 +297,29 @@ beforeAll(() => {
       this.size = parts?.reduce((acc: number, part: any) => acc + (part?.length || 0), 0) || 0;
       this.type = options?.type || '';
     }
+
+    async arrayBuffer(): Promise<ArrayBuffer> {
+      // Return ArrayBuffer matching the blob size
+      // If size is 0, return empty buffer; otherwise use size or default to 1024
+      return new ArrayBuffer(this.size > 0 ? this.size : (this.size === 0 ? 0 : 1024));
+    }
+
+    slice(): Blob {
+      return new MockBlob() as any;
+    }
+
+    stream() {
+      return {} as any;
+    }
+
+    async text(): Promise<string> {
+      return '';
+    }
+
+    async bytes(): Promise<Uint8Array> {
+      return new Uint8Array(0);
+    }
   }
-
-  MockBlob.prototype.arrayBuffer = async function (): Promise<ArrayBuffer> {
-    return new ArrayBuffer(0);
-  };
-
-  MockBlob.prototype.slice = function (): Blob {
-    return new MockBlob();
-  };
-
-  MockBlob.prototype.stream = function () {
-    return {};
-  };
-
-  MockBlob.prototype.text = async function (): Promise<string> {
-    return '';
-  };
 
   global.Blob = MockBlob as any;
 });

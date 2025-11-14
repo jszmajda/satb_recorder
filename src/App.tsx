@@ -4,9 +4,26 @@ import { MicrophoneSelector } from './components/MicrophoneSelector';
 import { ToneGenerator } from './components/ToneGenerator';
 import { TransportControl } from './components/TransportControl';
 import { useProjectStore } from './store/useProjectStore';
+import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 
 function App() {
   const currentProject = useProjectStore((state) => state.currentProject);
+  const restoreLastDeletedTrack = useProjectStore((state) => state.restoreLastDeletedTrack);
+
+  /**
+   * Keyboard shortcut: Ctrl+Z/Cmd+Z for undo delete
+   * [EARS: TRACK-003] Restore last deleted track
+   */
+  useKeyboardShortcuts({
+    onUndo: () => {
+      try {
+        restoreLastDeletedTrack();
+      } catch (error) {
+        // Silently ignore if nothing to undo
+        console.log('Nothing to undo');
+      }
+    },
+  });
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">

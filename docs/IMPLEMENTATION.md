@@ -794,11 +794,40 @@ This document outlines the implementation phases and tasks for building the SATB
 
 ## Phase 8: Polish & UX Enhancements
 
-### 8.1 Keyboard Shortcuts
-- [ ] Write tests for Space bar (play/pause)
-- [ ] Implement Space bar for play/pause toggle
-- [ ] Write tests for Ctrl+Z/Cmd+Z (undo delete) (TRACK-003)
-- [ ] Implement undo delete keyboard shortcut
+### 8.1 Keyboard Shortcuts ✅
+- [x] Write tests for Space bar (play/pause)
+- [x] Implement Space bar for play/pause toggle
+- [x] Write tests for Ctrl+Z/Cmd+Z (undo delete) (TRACK-003)
+- [x] Implement undo delete keyboard shortcut
+
+**Implementation:**
+- Created `src/hooks/useKeyboardShortcuts.ts` - Custom hook for global keyboard shortcuts
+  - Space bar: Play/Pause toggle (integrated in TransportControl)
+  - Ctrl+Z/Cmd+Z: Undo last deleted track (integrated in App)
+  - Prevents interference with text input (INPUT/TEXTAREA elements)
+  - Supports both Windows/Linux (Ctrl) and Mac (Cmd) modifiers
+
+- Created `src/hooks/useKeyboardShortcuts.test.ts` - 15 comprehensive tests
+  - Space bar: Basic functionality (1 test)
+  - Space bar: Modifier key handling (1 test)
+  - Space bar: Input field prevention (2 tests)
+  - Ctrl+Z/Cmd+Z: Windows/Linux and Mac support (3 tests)
+  - Ctrl+Z/Cmd+Z: Uppercase Z handling (1 test)
+  - Ctrl+Z/Cmd+Z: Modifier requirement (1 test)
+  - Ctrl+Z/Cmd+Z: Input field prevention (1 test)
+  - Hook lifecycle: Mount/unmount behavior (2 tests)
+  - Hook lifecycle: Missing callbacks handling (1 test)
+  - Edge cases: Multiple presses, other keys (3 tests)
+
+- Enhanced `src/components/TransportControl.tsx`
+  - Added handlePlayPauseToggle function
+  - Integrated useKeyboardShortcuts for Space bar
+
+- Enhanced `src/App.tsx`
+  - Integrated useKeyboardShortcuts for Ctrl+Z
+  - Error handling for empty undo stack
+
+**Test Results:** All 655 tests passing (+15 new tests)
 
 **EARS Requirements:** TRACK-003
 

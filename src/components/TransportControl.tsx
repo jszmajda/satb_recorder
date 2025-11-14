@@ -1,6 +1,7 @@
 // [EARS: PLAY-001, PLAY-002, PLAY-003, PLAY-005] Transport controls for playback
 
 import { useState, useEffect, useRef } from 'react';
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 
 type PlayState = 'stopped' | 'playing' | 'paused';
 
@@ -55,6 +56,13 @@ export function TransportControl() {
       handlePlay();
     }
   };
+
+  /**
+   * Keyboard shortcut: Space bar for play/pause toggle
+   */
+  useKeyboardShortcuts({
+    onPlayPause: handlePlayPauseToggle,
+  });
 
   /**
    * Start/stop time updates based on play state

@@ -430,19 +430,34 @@ This document outlines the implementation phases and tasks for building the SATB
 - Hover effects for better UX
 - State transitions: stopped → playing → paused → stopped
 
-### 4.6 VoicePartSection Component
-- [ ] Write tests for voice part rendering (VOICE-001)
-- [ ] Implement 4 voice part sections (S, A, T, B)
-- [ ] Write tests for collapse/expand toggle (VOICE-002)
-- [ ] Implement collapse/expand toggle
-- [ ] Write tests for track count display (VOICE-003)
-- [ ] Implement track count display
-- [ ] Write tests for color coding (VOICE-004)
-- [ ] Implement color-coded backgrounds (S=red, A=blue, T=green, B=purple)
-- [ ] Write tests for Add Track button (REC-001)
-- [ ] Implement Add Track button
+### 4.6 VoicePartSection Component ✅
+- [x] Write tests for voice part rendering (VOICE-001)
+- [x] Implement 4 voice part sections (S, A, T, B)
+- [x] Write tests for collapse/expand toggle (VOICE-002)
+- [x] Implement collapse/expand toggle
+- [x] Write tests for track count display (VOICE-003)
+- [x] Implement track count display
+- [x] Write tests for color coding (VOICE-004)
+- [x] Implement color-coded backgrounds (S=red, A=blue, T=green, B=purple)
+- [x] Write tests for Add Track button (REC-001)
+- [x] Implement Add Track button
 
 **EARS Requirements:** VOICE-001, VOICE-002, VOICE-003, VOICE-004, REC-001
+
+**Test Coverage:** 28 tests in src/components/VoicePartSection.test.tsx
+
+**Completed:** 2025-11-14
+
+**Features:**
+- Support for all 4 voice parts (Soprano, Alto, Tenor, Bass)
+- Collapse/expand toggle button (▼/▶ icons)
+- Track count display with proper singular/plural ("1 track" vs "2 tracks")
+- Color-coded left border (Soprano=red, Alto=blue, Tenor=green, Bass=purple)
+- Add Track button (+) with voice part color
+- Expanded by default showing child tracks
+- Collapsed state hides child tracks
+- onAddTrack callback with voicePartId parameter
+- Hover effects for Add Track button
 
 ### 4.7 TrackRow Component
 - [ ] Write tests for track controls layout (TRACK-011)

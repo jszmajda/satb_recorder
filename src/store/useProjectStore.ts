@@ -1,13 +1,16 @@
-// [EARS: PROJ-001 through PROJ-009] Zustand store for project management with auto-save
+// [EARS: PROJ-001 through PROJ-009, REC-010, TRACK-001 through TRACK-010] Zustand store for project and track management with auto-save
 
 import { create } from 'zustand';
-import type { Project, VoicePartType } from './types';
+import type { Project, VoicePartType, Track, UndoState } from './types';
 import * as projectsDb from '@/db/projects';
+import * as tracksDb from '@/db/tracks';
+import { db } from '@/db/index';
 
 interface ProjectStore {
   // State
   currentProject: Project | null;
   hasUnsavedChanges: boolean;
+  undoState: UndoState;
 
   // Actions - Project lifecycle
   createNewProject: (name: string) => Promise<void>;
@@ -21,18 +24,34 @@ interface ProjectStore {
   setOverdubEnabled: (enabled: boolean) => Promise<void>;
   toggleVoicePartExpanded: (voicePartType: VoicePartType) => Promise<void>;
 
+  // Actions - Track management
+  addTrack: (
+    voicePartType: VoicePartType,
+    trackData: { audioBlob: Blob; duration: number; waveformData: number[] }
+  ) => Promise<void>;
+  deleteTrack: (trackId: string) => Promise<void>;
+  undoDeleteTrack: () => Promise<void>;
+  setTrackSolo: (trackId: string, soloed: boolean) => Promise<void>;
+  setTrackMute: (trackId: string, muted: boolean) => Promise<void>;
+  setTrackVolume: (trackId: string, volume: number) => Promise<void>;
+  setTrackName: (trackId: string, name: string) => Promise<void>;
+
   // Utilities
   reset: () => void;
 }
 
 /**
  * Main project store with auto-save to IndexedDB
- * [EARS: PROJ-001, PROJ-002, PROJ-003, PROJ-004, PROJ-005, PROJ-006, PROJ-007, PROJ-008, PROJ-009]
+ * [EARS: PROJ-001 through PROJ-009, REC-010, TRACK-001 through TRACK-010]
  */
 export const useProjectStore = create<ProjectStore>((set, get) => ({
   // Initial state
   currentProject: null,
   hasUnsavedChanges: false,
+  undoState: {
+    lastDeletedTrack: null,
+    lastDeletedFromVoicePart: null,
+  },
 
   /**
    * Create a new project
@@ -193,12 +212,215 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   },
 
   /**
+   * Add a track to a voice part
+   * [EARS: REC-009] Auto-save track to IndexedDB
+   * [EARS: REC-010] Auto-generate track name
+   * [EARS: REC-011] Enforce 8-track limit
+   */
+  addTrack: async (voicePartType: VoicePartType, trackData) => {
+    const { currentProject } = get();
+
+    if (!currentProject) {
+      throw new Error('No project loaded');
+    }
+
+    await tracksDb.addTrackToProject(currentProject.id, voicePartType, trackData);
+
+    const updatedProject = await projectsDb.getProject(currentProject.id);
+
+    set({
+      currentProject: updatedProject!,
+      hasUnsavedChanges: false,
+    });
+  },
+
+  /**
+   * Delete a track
+   * [EARS: TRACK-001] Store in undo state
+   * [EARS: TRACK-002] Remove from IndexedDB
+   */
+  deleteTrack: async (trackId: string) => {
+    const { currentProject } = get();
+
+    if (!currentProject) {
+      throw new Error('No project loaded');
+    }
+
+    // Find the track to store in undo state
+    let deletedTrack: Track | null = null;
+    let deletedFromVoicePart: VoicePartType | null = null;
+
+    for (const voicePart of currentProject.voiceParts) {
+      const track = voicePart.tracks.find(t => t.id === trackId);
+      if (track) {
+        deletedTrack = track;
+        deletedFromVoicePart = voicePart.type;
+        break;
+      }
+    }
+
+    if (!deletedTrack) {
+      throw new Error('Track not found');
+    }
+
+    // Delete from database
+    await tracksDb.deleteTrack(currentProject.id, trackId);
+
+    // Update project state
+    const updatedProject = await projectsDb.getProject(currentProject.id);
+
+    set({
+      currentProject: updatedProject!,
+      hasUnsavedChanges: false,
+      undoState: {
+        lastDeletedTrack: deletedTrack,
+        lastDeletedFromVoicePart: deletedFromVoicePart,
+      },
+    });
+  },
+
+  /**
+   * Undo delete track (single-level undo)
+   * [EARS: TRACK-003] Restore last deleted track
+   * [EARS: TRACK-004] Single-level undo only
+   */
+  undoDeleteTrack: async () => {
+    const { currentProject, undoState } = get();
+
+    if (!currentProject) {
+      throw new Error('No project loaded');
+    }
+
+    if (!undoState.lastDeletedTrack || !undoState.lastDeletedFromVoicePart) {
+      throw new Error('Nothing to undo');
+    }
+
+    // Re-add the track directly to IndexedDB with original ID
+    await db.tracks.add(undoState.lastDeletedTrack);
+
+    // Update project voice parts to include the restored track
+    const updatedVoiceParts = currentProject.voiceParts.map(vp => {
+      if (vp.type === undoState.lastDeletedFromVoicePart) {
+        return {
+          ...vp,
+          tracks: [...vp.tracks, undoState.lastDeletedTrack!],
+        };
+      }
+      return vp;
+    });
+
+    await projectsDb.updateProject(currentProject.id, { voiceParts: updatedVoiceParts });
+
+    // Refresh project state and clear undo
+    const finalProject = await projectsDb.getProject(currentProject.id);
+
+    set({
+      currentProject: finalProject!,
+      hasUnsavedChanges: false,
+      undoState: {
+        lastDeletedTrack: null,
+        lastDeletedFromVoicePart: null,
+      },
+    });
+  },
+
+  /**
+   * Set track solo flag
+   * [EARS: TRACK-005] Set solo flag
+   */
+  setTrackSolo: async (trackId: string, soloed: boolean) => {
+    const { currentProject } = get();
+
+    if (!currentProject) {
+      throw new Error('No project loaded');
+    }
+
+    await tracksDb.updateTrack(trackId, { soloed });
+
+    const updatedProject = await projectsDb.getProject(currentProject.id);
+
+    set({
+      currentProject: updatedProject!,
+      hasUnsavedChanges: false,
+    });
+  },
+
+  /**
+   * Set track mute flag
+   * [EARS: TRACK-006] Set mute flag
+   * [EARS: TRACK-007] Mute does not modify volume
+   */
+  setTrackMute: async (trackId: string, muted: boolean) => {
+    const { currentProject } = get();
+
+    if (!currentProject) {
+      throw new Error('No project loaded');
+    }
+
+    await tracksDb.updateTrack(trackId, { muted });
+
+    const updatedProject = await projectsDb.getProject(currentProject.id);
+
+    set({
+      currentProject: updatedProject!,
+      hasUnsavedChanges: false,
+    });
+  },
+
+  /**
+   * Set track volume
+   * [EARS: TRACK-008] Update volume (0-100)
+   * [EARS: TRACK-009] Volume persists independently of mute
+   */
+  setTrackVolume: async (trackId: string, volume: number) => {
+    const { currentProject } = get();
+
+    if (!currentProject) {
+      throw new Error('No project loaded');
+    }
+
+    await tracksDb.updateTrack(trackId, { volume });
+
+    const updatedProject = await projectsDb.getProject(currentProject.id);
+
+    set({
+      currentProject: updatedProject!,
+      hasUnsavedChanges: false,
+    });
+  },
+
+  /**
+   * Set track name
+   * [EARS: TRACK-010] Edit track name
+   */
+  setTrackName: async (trackId: string, name: string) => {
+    const { currentProject } = get();
+
+    if (!currentProject) {
+      throw new Error('No project loaded');
+    }
+
+    await tracksDb.updateTrack(trackId, { name });
+
+    const updatedProject = await projectsDb.getProject(currentProject.id);
+
+    set({
+      currentProject: updatedProject!,
+      hasUnsavedChanges: false,
+    });
+  },
+
+  /**
    * Reset store to initial state
    */
   reset: () => {
     set({
       currentProject: null,
       hasUnsavedChanges: false,
+      undoState: {
+        lastDeletedTrack: null,
+        lastDeletedFromVoicePart: null,
+      },
     });
   },
 }));

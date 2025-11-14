@@ -104,39 +104,51 @@ This document outlines the implementation phases and tasks for building the SATB
 
 **Completed:** 2025-11-14
 
-### 2.4 Zustand Store - Track Management
-- [ ] Write tests for track creation (REC-010)
-- [ ] Implement add track action with auto-generated names
-- [ ] Write tests for track deletion (TRACK-001, TRACK-002)
-- [ ] Implement delete track action
-- [ ] Write tests for undo delete (TRACK-003, TRACK-004)
-- [ ] Implement single-level undo for delete
-- [ ] Write tests for track limit (REC-011)
-- [ ] Implement max 8 tracks per voice part validation
-- [ ] Write tests for solo/mute flags (TRACK-005, TRACK-006, TRACK-007)
-- [ ] Implement solo/mute state management
-- [ ] Write tests for volume control (TRACK-008, TRACK-009)
-- [ ] Implement volume state management
-- [ ] Write tests for track name editing (TRACK-010)
-- [ ] Implement track name update action
+### 2.4 Zustand Store - Track Management ✅
+- [x] Write tests for track creation (REC-010)
+- [x] Implement add track action with auto-generated names
+- [x] Write tests for track deletion (TRACK-001, TRACK-002)
+- [x] Implement delete track action with undo state storage
+- [x] Write tests for undo delete (TRACK-003, TRACK-004)
+- [x] Implement single-level undo for delete (preserves original track ID)
+- [x] Write tests for track limit (REC-011)
+- [x] Implement max 8 tracks per voice part validation
+- [x] Write tests for solo/mute flags (TRACK-005, TRACK-006, TRACK-007)
+- [x] Implement solo/mute state management
+- [x] Write tests for volume control (TRACK-008, TRACK-009)
+- [x] Implement volume state management with 0-100 clamping
+- [x] Write tests for track name editing (TRACK-010)
+- [x] Implement track name update action
 
-**EARS Requirements:** REC-010, REC-011, TRACK-001, TRACK-002, TRACK-003, TRACK-004, TRACK-005, TRACK-006, TRACK-007, TRACK-008, TRACK-009, TRACK-010
+**EARS Requirements:** REC-009, REC-010, REC-011, TRACK-001, TRACK-002, TRACK-003, TRACK-004, TRACK-005, TRACK-006, TRACK-007, TRACK-008, TRACK-009, TRACK-010
 
-### 2.5 Zustand Store - Voice Parts
-- [ ] Write tests for voice part initialization (VOICE-001)
-- [ ] Implement 4 voice parts (S, A, T, B) initialization
-- [ ] Write tests for collapse/expand (VOICE-002)
-- [ ] Implement collapse/expand state per voice part
-- [ ] Write tests for track count (VOICE-003)
-- [ ] Implement track count calculation
+**Test Coverage:** 37 tests in src/store/useProjectStore.tracks.test.ts
+
+**Completed:** 2025-11-14
+
+### 2.5 Zustand Store - Voice Parts ✅
+- [x] Write tests for voice part initialization (VOICE-001) - covered in project store tests
+- [x] Implement 4 voice parts (S, A, T, B) initialization
+- [x] Write tests for collapse/expand (VOICE-002)
+- [x] Implement collapse/expand state per voice part (toggleVoicePartExpanded action)
+- [x] Write tests for track count (VOICE-003) - tracks array length in voice parts
+- [x] Implement track count calculation
 
 **EARS Requirements:** VOICE-001, VOICE-002, VOICE-003
 
-### 2.6 Zustand Store - Overdub Control
-- [ ] Write tests for overdub toggle (OVER-001, OVER-004)
-- [ ] Implement overdub state management
+**Test Coverage:** Covered in project management tests
+
+**Completed:** 2025-11-14 (implemented as part of project management store)
+
+### 2.6 Zustand Store - Overdub Control ✅
+- [x] Write tests for overdub toggle (OVER-001, OVER-004)
+- [x] Implement overdub state management (setOverdubEnabled action)
 
 **EARS Requirements:** OVER-001, OVER-004
+
+**Test Coverage:** Covered in project management tests
+
+**Completed:** 2025-11-14 (implemented as part of project management store)
 
 ---
 

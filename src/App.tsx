@@ -1,6 +1,8 @@
 import { TopBar } from './components/TopBar';
 import { MetronomeControl } from './components/MetronomeControl';
 import { MicrophoneSelector } from './components/MicrophoneSelector';
+import { ToneGenerator } from './components/ToneGenerator';
+import { TransportControl } from './components/TransportControl';
 import { useProjectStore } from './store/useProjectStore';
 
 function App() {
@@ -23,8 +25,18 @@ function App() {
           ) : (
             <>
               <div>
+                <h2 className="text-xl font-bold mb-4">Transport Controls</h2>
+                <TransportControl />
+              </div>
+
+              <div>
                 <h2 className="text-xl font-bold mb-4">Metronome</h2>
                 <MetronomeControl />
+              </div>
+
+              <div>
+                <h2 className="text-xl font-bold mb-4">Reference Tones</h2>
+                <ToneGenerator />
               </div>
 
               <div>
@@ -34,7 +46,7 @@ function App() {
 
               <div className="mt-8">
                 <p className="text-gray-500 text-sm">
-                  More recording controls coming soon...
+                  Track recording controls coming soon...
                 </p>
               </div>
             </>

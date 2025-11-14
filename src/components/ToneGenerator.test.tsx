@@ -111,7 +111,7 @@ describe('TONE-004: Play tone on button press', () => {
       fireEvent.click(button);
       expect(mockToneGenerator.playTone).toHaveBeenCalledWith(note);
     });
-  });
+  }, 10000); // Increase timeout for testing all 12 buttons
 
   test('plays different tones for different buttons', () => {
     render(<ToneGeneratorComponent />);

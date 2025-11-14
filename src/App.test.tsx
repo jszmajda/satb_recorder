@@ -15,6 +15,14 @@ vi.mock('./components/MicrophoneSelector', () => ({
   MicrophoneSelector: () => <div data-testid="microphone">Microphone Component</div>,
 }));
 
+vi.mock('./components/ToneGenerator', () => ({
+  ToneGenerator: () => <div data-testid="tone-generator">ToneGenerator Component</div>,
+}));
+
+vi.mock('./components/TransportControl', () => ({
+  TransportControl: () => <div data-testid="transport">TransportControl Component</div>,
+}));
+
 // Mock the store
 vi.mock('./store/useProjectStore', () => ({
   useProjectStore: vi.fn((selector) => {

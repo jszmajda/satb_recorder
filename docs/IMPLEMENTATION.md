@@ -403,17 +403,32 @@ This document outlines the implementation phases and tasks for building the SATB
 - Hover effects for better UX
 - Proper cleanup on component unmount
 
-### 4.5 TransportControl Component
-- [ ] Write tests for Play button (PLAY-001)
-- [ ] Implement Play button
-- [ ] Write tests for Pause button (PLAY-002)
-- [ ] Implement Pause button (same button as Play)
-- [ ] Write tests for Stop button (PLAY-003)
-- [ ] Implement Stop button
-- [ ] Write tests for time display (PLAY-005)
-- [ ] Implement playhead time display (current / total)
+### 4.5 TransportControl Component ✅
+- [x] Write tests for Play button (PLAY-001)
+- [x] Implement Play button
+- [x] Write tests for Pause button (PLAY-002)
+- [x] Implement Pause button (same button as Play)
+- [x] Write tests for Stop button (PLAY-003)
+- [x] Implement Stop button
+- [x] Write tests for time display (PLAY-005)
+- [x] Implement playhead time display (current / total)
 
 **EARS Requirements:** PLAY-001, PLAY-002, PLAY-003, PLAY-005
+
+**Test Coverage:** 22 tests in src/components/TransportControl.test.tsx
+
+**Completed:** 2025-11-14
+
+**Features:**
+- Play/Pause toggle button (▶/⏸ icons)
+- Stop button (⏹ icon, disabled when stopped)
+- Time display in M:SS / M:SS format
+- Playing state advances time at 100ms intervals
+- Pause maintains current time position
+- Stop resets time to 0:00
+- Visual state feedback with color changes (green for play, orange for pause, red for stop)
+- Hover effects for better UX
+- State transitions: stopped → playing → paused → stopped
 
 ### 4.6 VoicePartSection Component
 - [ ] Write tests for voice part rendering (VOICE-001)

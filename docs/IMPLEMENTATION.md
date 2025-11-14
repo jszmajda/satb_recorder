@@ -154,19 +154,23 @@ This document outlines the implementation phases and tasks for building the SATB
 
 ## Phase 3: Audio Engine - Core Modules
 
-### 3.1 Metronome Module
-- [ ] Write tests for metronome initialization (MET-001)
-- [ ] Implement Tone.js Transport integration
-- [ ] Write tests for BPM control (MET-002, MET-003, MET-004)
-- [ ] Implement BPM adjustment logic
-- [ ] Write tests for visual flash callback (MET-005)
-- [ ] Implement visual callback system
-- [ ] Write tests for sync during recording (MET-006)
-- [ ] Implement metronome sync during recording
-- [ ] Write tests for sync during playback (MET-007)
-- [ ] Implement metronome sync during playback
+### 3.1 Metronome Module ✅
+- [x] Write tests for metronome initialization (MET-001)
+- [x] Implement Tone.js Transport integration
+- [x] Write tests for BPM control (MET-002, MET-003, MET-004)
+- [x] Implement BPM adjustment logic with clamping (40-240 BPM)
+- [x] Write tests for visual flash callback (MET-005)
+- [x] Implement visual callback system using Tone.Draw
+- [x] Write tests for sync during recording (MET-006)
+- [x] Implement metronome start/stop synchronized with Transport
+- [x] Write tests for sync during playback (MET-007)
+- [x] Implement metronome sync during playback
 
 **EARS Requirements:** MET-001, MET-002, MET-003, MET-004, MET-005, MET-006, MET-007
+
+**Test Coverage:** 27 tests in src/audio/metronome.test.ts
+
+**Completed:** 2025-11-14
 
 ### 3.2 ToneGenerator Module
 - [ ] Write tests for tone generator initialization (TONE-001)

@@ -11,6 +11,69 @@ afterEach(() => {
   cleanup();
 });
 
+// Mock Tone.js
+vi.mock('tone', () => {
+  let transportBpm = 120;
+  let transportState = 'stopped';
+  const scheduleCallbacks: Map<number, { callback: (time: number) => void; interval: string }> = new Map();
+  let nextScheduleId = 1;
+  let intervalHandle: NodeJS.Timeout | null = null;
+
+  const mockTransport = {
+    bpm: {
+      get value() {
+        return transportBpm;
+      },
+      set value(val: number) {
+        transportBpm = val;
+      },
+    },
+    get state() {
+      return transportState;
+    },
+    start: vi.fn(() => {
+      transportState = 'started';
+      // Simulate scheduled callbacks
+      if (scheduleCallbacks.size > 0 && !intervalHandle) {
+        intervalHandle = setInterval(() => {
+          if (transportState === 'started') {
+            scheduleCallbacks.forEach(({ callback }) => {
+              callback(0); // Call with dummy time
+            });
+          }
+        }, (60 / transportBpm) * 1000); // Convert BPM to milliseconds per beat
+      }
+    }),
+    stop: vi.fn(() => {
+      transportState = 'stopped';
+      if (intervalHandle) {
+        clearInterval(intervalHandle);
+        intervalHandle = null;
+      }
+    }),
+    scheduleRepeat: vi.fn((callback: (time: number) => void, interval: string) => {
+      const id = nextScheduleId++;
+      scheduleCallbacks.set(id, { callback, interval });
+      return id;
+    }),
+    clear: vi.fn((id: number) => {
+      scheduleCallbacks.delete(id);
+      if (scheduleCallbacks.size === 0 && intervalHandle) {
+        clearInterval(intervalHandle);
+        intervalHandle = null;
+      }
+    }),
+  };
+
+  return {
+    getTransport: vi.fn(() => mockTransport),
+    Draw: {
+      schedule: vi.fn((callback: () => void) => callback()),
+    },
+    default: {},
+  };
+});
+
 // Mock Web Audio API
 beforeAll(() => {
   // Mock AudioContext

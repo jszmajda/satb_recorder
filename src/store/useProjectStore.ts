@@ -11,6 +11,7 @@ interface ProjectStore {
   currentProject: Project | null;
   hasUnsavedChanges: boolean;
   undoState: UndoState;
+  tracks: Track[];
 
   // Actions - Project lifecycle
   createNewProject: (name: string) => Promise<void>;
@@ -36,9 +37,22 @@ interface ProjectStore {
   setTrackVolume: (trackId: string, volume: number) => Promise<void>;
   setTrackName: (trackId: string, name: string) => Promise<void>;
 
+  // Convenience wrappers for UI components
+  createProject: (name: string) => Promise<void>;
+  updateProject: (id: string, updates: { name: string }) => Promise<void>;
+  deleteProject: (id: string) => Promise<void>;
+
   // Utilities
   reset: () => void;
 }
+
+/**
+ * Helper: Extract all tracks from a project
+ */
+const getTracksFromProject = (project: Project | null): Track[] => {
+  if (!project) return [];
+  return project.voiceParts.flatMap(vp => vp.tracks);
+};
 
 /**
  * Main project store with auto-save to IndexedDB
@@ -48,6 +62,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   // Initial state
   currentProject: null,
   hasUnsavedChanges: false,
+  tracks: [],
   undoState: {
     lastDeletedTrack: null,
     lastDeletedFromVoicePart: null,
@@ -71,6 +86,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
 
     set({
       currentProject: project,
+      tracks: getTracksFromProject(project),
       hasUnsavedChanges: false,
     });
   },
@@ -89,6 +105,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
 
     set({
       currentProject: project,
+      tracks: getTracksFromProject(project),
       hasUnsavedChanges: false,
     });
   },
@@ -116,6 +133,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
 
     set({
       currentProject: null,
+      tracks: [],
       hasUnsavedChanges: false,
     });
   },
@@ -137,6 +155,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
 
     set({
       currentProject: updatedProject!,
+      tracks: getTracksFromProject(updatedProject!),
       hasUnsavedChanges: false,
     });
   },
@@ -158,6 +177,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
 
     set({
       currentProject: updatedProject!,
+      tracks: getTracksFromProject(updatedProject!),
       hasUnsavedChanges: false,
     });
   },
@@ -179,6 +199,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
 
     set({
       currentProject: updatedProject!,
+      tracks: getTracksFromProject(updatedProject!),
       hasUnsavedChanges: false,
     });
   },
@@ -207,6 +228,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
 
     set({
       currentProject: updatedProject!,
+      tracks: getTracksFromProject(updatedProject!),
       hasUnsavedChanges: false,
     });
   },
@@ -230,6 +252,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
 
     set({
       currentProject: updatedProject!,
+      tracks: getTracksFromProject(updatedProject!),
       hasUnsavedChanges: false,
     });
   },
@@ -341,6 +364,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
 
     set({
       currentProject: updatedProject!,
+      tracks: getTracksFromProject(updatedProject!),
       hasUnsavedChanges: false,
     });
   },
@@ -363,6 +387,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
 
     set({
       currentProject: updatedProject!,
+      tracks: getTracksFromProject(updatedProject!),
       hasUnsavedChanges: false,
     });
   },
@@ -385,6 +410,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
 
     set({
       currentProject: updatedProject!,
+      tracks: getTracksFromProject(updatedProject!),
       hasUnsavedChanges: false,
     });
   },
@@ -406,8 +432,38 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
 
     set({
       currentProject: updatedProject!,
+      tracks: getTracksFromProject(updatedProject!),
       hasUnsavedChanges: false,
     });
+  },
+
+  /**
+   * Convenience wrapper: Create project (matches TopBar API)
+   */
+  createProject: async (name: string) => {
+    return get().createNewProject(name);
+  },
+
+  /**
+   * Convenience wrapper: Update project (matches TopBar API)
+   */
+  updateProject: async (id: string, updates: { name: string }) => {
+    const { currentProject } = get();
+    if (!currentProject || currentProject.id !== id) {
+      throw new Error('Project ID mismatch');
+    }
+    return get().updateProjectName(updates.name);
+  },
+
+  /**
+   * Convenience wrapper: Delete project (matches TopBar API)
+   */
+  deleteProject: async (id: string) => {
+    const { currentProject } = get();
+    if (!currentProject || currentProject.id !== id) {
+      throw new Error('Project ID mismatch');
+    }
+    return get().deleteCurrentProject();
   },
 
   /**
@@ -416,6 +472,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   reset: () => {
     set({
       currentProject: null,
+      tracks: [],
       hasUnsavedChanges: false,
       undoState: {
         lastDeletedTrack: null,

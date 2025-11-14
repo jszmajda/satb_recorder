@@ -65,11 +65,42 @@ vi.mock('tone', () => {
     }),
   };
 
+  // Mock Oscillator class
+  class MockOscillator {
+    frequency: { value: number };
+    type: string;
+    private started: boolean = false;
+
+    constructor(options?: { frequency?: number; type?: string }) {
+      this.frequency = { value: options?.frequency || 440 };
+      this.type = options?.type || 'sine';
+    }
+
+    toDestination() {
+      return this;
+    }
+
+    start() {
+      this.started = true;
+      return this;
+    }
+
+    stop() {
+      this.started = false;
+      return this;
+    }
+
+    dispose() {
+      this.started = false;
+    }
+  }
+
   return {
     getTransport: vi.fn(() => mockTransport),
     Draw: {
       schedule: vi.fn((callback: () => void) => callback()),
     },
+    Oscillator: MockOscillator,
     default: {},
   };
 });

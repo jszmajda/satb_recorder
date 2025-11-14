@@ -173,16 +173,21 @@ This document outlines the implementation phases and tasks for building the SATB
 **Completed:** 2025-11-14
 
 ### 3.2 ToneGenerator Module
-- [ ] Write tests for tone generator initialization (TONE-001)
-- [ ] Implement Tone.js oscillator setup
-- [ ] Write tests for 12-tone chromatic scale (TONE-002)
-- [ ] Implement frequency mapping for C4 (261.63 Hz) to B4 (493.88 Hz)
-- [ ] Write tests for tone playback (TONE-004)
-- [ ] Implement play tone on button press
-- [ ] Write tests for tone stop (TONE-005)
-- [ ] Implement stop tone on release or second click
+- [x] Write tests for tone generator initialization (TONE-001)
+- [x] Implement Tone.js oscillator setup
+- [x] Write tests for 12-tone chromatic scale (TONE-002)
+- [x] Implement frequency mapping for C4 (261.63 Hz) to B4 (493.88 Hz)
+- [x] Write tests for note labels (TONE-003)
+- [x] Write tests for tone playback (TONE-004)
+- [x] Implement play tone on button press
+- [x] Write tests for tone stop (TONE-005)
+- [x] Implement stop tone on release or second click
 
-**EARS Requirements:** TONE-001, TONE-002, TONE-004, TONE-005
+**EARS Requirements:** TONE-001, TONE-002, TONE-003, TONE-004, TONE-005
+
+**Test Coverage:** 31 tests in src/audio/toneGenerator.test.ts
+
+**Completed:** 2025-11-14
 
 ### 3.3 Recorder Module - Device Management
 - [ ] Write tests for microphone enumeration (MIC-001)

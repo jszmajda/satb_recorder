@@ -172,30 +172,52 @@ recorder/
 
 1. **Read the EARS requirement(s)** from `docs/DESIGN.md`
 2. **Check the implementation plan** in `docs/IMPLEMENTATION.md`
+   - Find which task you're working on
+   - Note which EARS requirements it covers
 3. **Write the test FIRST** (Red)
-   - Reference EARS ID in test name or description
-   - Example: `test('REC-001: requests microphone permission when adding track', ...)`
+   - Use `describe('SPEC-ID: behavior')` format
+   - Example: `describe('REC-001: Request microphone permissions', ...)`
+   - Include positive tests, negative tests, and edge cases
+   - Test behavior/interfaces, not implementation details
 4. **Run the test**, verify it fails
 5. **Write minimal implementation** (Green)
    - Add EARS comment in code: `// [EARS: REC-001]`
+   - Implement just enough to make tests pass
 6. **Run the test**, verify it passes
 7. **Refactor** if needed, keeping tests green
-8. **Update checklist** in `docs/IMPLEMENTATION.md`
+8. **✅ CRITICAL: Update checklist** in `docs/IMPLEMENTATION.md`
+   - Mark tasks as `[x]` when complete
+   - Update EARS requirements checklist
+   - This step is MANDATORY - don't skip it!
 
 ### Example TDD Session
 
 ```typescript
 // 1. RED: Write failing test first
 // src/tests/audio/recorder.test.ts
-describe('Recorder Module', () => {
-  test('REC-001: requests microphone permission when starting recording', async () => {
-    const mockGetUserMedia = vi.fn();
+import { describe, test, expect, vi } from 'vitest';
+
+// Use describe() with EARS ID to organize tests by requirement
+describe('REC-001: Request microphone permissions', () => {
+  // Positive test - happy path
+  test('requests permission when starting recording', async () => {
+    const mockGetUserMedia = vi.fn().mockResolvedValue({});
     navigator.mediaDevices.getUserMedia = mockGetUserMedia;
 
     const recorder = new Recorder();
     await recorder.start();
 
     expect(mockGetUserMedia).toHaveBeenCalledWith({ audio: true });
+  });
+
+  // Negative test - permission denied
+  test('throws error when permission denied', async () => {
+    const mockGetUserMedia = vi.fn().mockRejectedValue(new Error('Permission denied'));
+    navigator.mediaDevices.getUserMedia = mockGetUserMedia;
+
+    const recorder = new Recorder();
+
+    await expect(recorder.start()).rejects.toThrow('Permission denied');
   });
 });
 
@@ -232,63 +254,137 @@ export class Recorder {
 
 ## Testing Strategy
 
-### Test Organization
+### Philosophy: Outside-In, Behavior-Driven Testing
 
-**Unit Tests:**
-- `src/tests/audio/` - Audio engine modules (mocked Web Audio API)
-- `src/tests/store/` - Zustand store (state management)
-- `src/tests/utils/` - Utility functions
+**CRITICAL:** We test **behavior and interfaces**, NOT implementation details.
 
-**Component Tests:**
-- `src/tests/components/` - React components (React Testing Library)
+**Outside-In Approach:**
+- Start with the public interface (what users/other modules interact with)
+- Test the contract, not the internals
+- Implementation can change as long as behavior stays correct
+- Focus on "what" the system does, not "how" it does it
 
-**Integration Tests:**
-- `src/tests/integration/` - Full workflows (record → playback → export)
+**When to test internals:**
+- Complex algorithms with tricky edge cases
+- Critical business logic that needs verification
+- Paths that are hard to reach from the public interface
 
-### Test Naming Convention
+### Test Organization & Naming
 
-Include EARS requirement ID in test descriptions:
+**Use `describe()` blocks organized by EARS requirement:**
 
 ```typescript
-// Good
-test('MIC-001: enumerates available microphone devices on load', ...)
-test('TRACK-007: mute flag preserves volume setting', ...)
-test('PLAY-008: syncs playback across all non-muted tracks', ...)
+import { describe, test, expect } from 'vitest';
 
-// Bad (no traceability)
-test('lists microphones', ...)
-test('mute works', ...)
-test('plays tracks', ...)
+// Good: Test behavior tied to EARS spec
+describe('REC-001: Request microphone permissions', () => {
+  test('requests permission when starting recording', async () => {
+    // Test the behavior from outside
+  });
+
+  test('throws error when permission denied', async () => {
+    // Negative test - expected failure case
+  });
+
+  test('reuses existing permission without re-requesting', async () => {
+    // Edge case test
+  });
+});
+
+describe('TRACK-007: Mute flag preserves volume', () => {
+  test('muted track retains volume setting', () => {
+    // Test observable behavior
+  });
+
+  test('unmuting track restores original volume', () => {
+    // Test the contract
+  });
+
+  test('volume can be adjusted while track is muted', () => {
+    // Edge case
+  });
+});
+
+// Bad: Testing implementation details
+describe('Recorder internal state', () => {
+  test('sets _isRecording flag to true', () => {
+    // ❌ Testing internal state
+  });
+});
 ```
 
-### Mocking
+### Include Negative Tests & Edge Cases
 
-- Mock Web Audio API (AudioContext, GainNode, AnalyserNode, MediaRecorder)
-- Mock MediaDevices API (enumerateDevices, getUserMedia)
-- Mock IndexedDB (using fake-indexeddb)
-- Mock Tone.js Transport
+**Think creatively about what could go wrong:**
 
-Example mock setup:
+```typescript
+describe('MET-003: BPM adjustment via direct input', () => {
+  // Positive test
+  test('accepts valid BPM value', () => { ... });
+
+  // Negative tests
+  test('rejects BPM below 40', () => { ... });
+  test('rejects BPM above 240', () => { ... });
+  test('rejects non-numeric input', () => { ... });
+  test('rejects negative numbers', () => { ... });
+  test('rejects floating point numbers', () => { ... });
+
+  // Edge cases
+  test('handles empty input gracefully', () => { ... });
+  test('trims whitespace from input', () => { ... });
+  test('handles very large numbers', () => { ... });
+});
+```
+
+**Categories of tests to consider:**
+- ✅ **Happy path** - Expected usage
+- ⚠️ **Sad path** - Expected errors (permission denied, network failure)
+- 🔥 **Edge cases** - Boundary conditions (empty arrays, max values, null/undefined)
+- 🐛 **Regression** - Bugs that were fixed (prevent them from coming back)
+
+### Test Organization by Layer
+
+**Unit Tests:**
+- `src/tests/audio/` - Audio engine modules (test public APIs)
+- `src/tests/store/` - Zustand store (test state transitions)
+- `src/tests/utils/` - Utility functions (test pure functions)
+
+**Component Tests:**
+- `src/tests/components/` - React components (test user interactions)
+- Test what users see and do, not React internals
+- Use `screen.getByRole()`, `screen.getByLabelText()` (accessible queries)
+- Avoid `screen.getByTestId()` unless necessary
+
+**Integration Tests:**
+- `src/tests/integration/` - Full workflows
+- Test multiple systems working together
+- Examples: record → playback → export, save → load project
+
+### Mocking Strategy
+
+Mock at the **boundaries** of our system:
 
 ```typescript
 import { vi, beforeEach } from 'vitest';
 
 beforeEach(() => {
-  // Mock Web Audio API
-  global.AudioContext = vi.fn().mockImplementation(() => ({
-    createGain: vi.fn(),
-    createAnalyser: vi.fn(),
-    createOscillator: vi.fn(),
-    destination: {},
-  }));
-
-  // Mock MediaDevices
-  navigator.mediaDevices = {
-    getUserMedia: vi.fn(),
-    enumerateDevices: vi.fn(),
-  };
+  // Mock external APIs (Web Audio, MediaDevices, IndexedDB)
+  // These are boundaries we don't control
+  global.AudioContext = vi.fn().mockImplementation(() => ({ ... }));
+  navigator.mediaDevices = { ... };
 });
 ```
+
+**What to mock:**
+- ✅ External APIs (Web Audio, DOM APIs, IndexedDB)
+- ✅ Network requests
+- ✅ Timers (for metronome, animations)
+- ✅ File system operations
+
+**What NOT to mock:**
+- ❌ Your own modules (test them for real)
+- ❌ Simple utilities (test actual behavior)
+- ❌ Pure functions (they're easy to test directly)
 
 ## Common Development Commands
 
@@ -437,17 +533,22 @@ If you encounter issues:
 
 ### DO:
 ✅ Write tests FIRST (red-green-refactor)
-✅ Reference EARS IDs in test names
+✅ Use `describe('SPEC-ID: behavior')` for test organization
+✅ Test behavior/interfaces, not implementation details
+✅ Include positive tests, negative tests, AND edge cases
 ✅ Add `// [EARS: ID]` comments in implementation code
 ✅ Run tests frequently during development
 ✅ Keep tests green while refactoring
-✅ Update implementation checklist as you complete tasks
+✅ **Update `docs/IMPLEMENTATION.md` as you complete tasks** (MANDATORY)
 ✅ Use TypeScript strictly (no `any` types without good reason)
 ✅ Store audio as uncompressed WAV in IndexedDB
 ✅ Auto-save on every state change
 
 ### DON'T:
 ❌ Write implementation code without a test first
+❌ Test internal implementation details (private methods, internal state)
+❌ Forget negative tests and edge cases
+❌ Skip updating `docs/IMPLEMENTATION.md` checklist
 ❌ Modify GainNode for mute (use boolean flag)
 ❌ Skip EARS comments in code
 ❌ Commit code with failing tests
@@ -476,11 +577,14 @@ Here's a full example implementing **MET-003: BPM adjustment via direct input**
 ```typescript
 // 1. RED: Write test first
 // src/tests/components/MetronomeControl.test.tsx
+import { describe, test, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MetronomeControl } from '@/components/MetronomeControl';
 
-describe('MetronomeControl', () => {
-  test('MET-003: allows BPM adjustment by typing value', () => {
+// Use describe() with EARS ID
+describe('MET-003: BPM adjustment via direct input', () => {
+  // Positive test - happy path
+  test('accepts valid BPM value', () => {
     const handleBpmChange = vi.fn();
     render(<MetronomeControl bpm={120} onBpmChange={handleBpmChange} />);
 
@@ -490,6 +594,34 @@ describe('MetronomeControl', () => {
 
     // [EARS: MET-004] Update tempo immediately on change
     expect(handleBpmChange).toHaveBeenCalledWith(140);
+  });
+
+  // Negative test - invalid input
+  test('rejects BPM below minimum (40)', () => {
+    const handleBpmChange = vi.fn();
+    render(<MetronomeControl bpm={120} onBpmChange={handleBpmChange} />);
+
+    const input = screen.getByLabelText(/bpm/i);
+    fireEvent.change(input, { target: { value: '30' } });
+    fireEvent.blur(input);
+
+    // Should not call handler with invalid value
+    expect(handleBpmChange).not.toHaveBeenCalled();
+    // Should show original value
+    expect(input).toHaveValue('120');
+  });
+
+  // Edge case - empty input
+  test('handles empty input gracefully', () => {
+    const handleBpmChange = vi.fn();
+    render(<MetronomeControl bpm={120} onBpmChange={handleBpmChange} />);
+
+    const input = screen.getByLabelText(/bpm/i);
+    fireEvent.change(input, { target: { value: '' } });
+    fireEvent.blur(input);
+
+    expect(handleBpmChange).not.toHaveBeenCalled();
+    expect(input).toHaveValue('120');
   });
 });
 
@@ -581,20 +713,36 @@ export const MetronomeControl: React.FC<MetronomeControlProps> = ({
 
 Before committing any code:
 
-- [ ] All tests passing (`npm run test:run`)
-- [ ] EARS comments added to implementation code
-- [ ] Test names reference EARS IDs
-- [ ] TypeScript compiles without errors (`npm run type-check`)
-- [ ] Implementation checklist updated in `docs/IMPLEMENTATION.md`
+**Testing:**
+- [ ] All tests passing (`bun run test:run`)
+- [ ] Tests use `describe('SPEC-ID: behavior')` format
+- [ ] Tests cover positive cases, negative cases, AND edge cases
+- [ ] Tests validate behavior/interfaces, not implementation details
+- [ ] TypeScript compiles without errors (`bun run type-check`)
+- [ ] ESLint passes with no errors (`bun run lint`)
+
+**Code Quality:**
+- [ ] EARS comments added to implementation code (`// [EARS: SPEC-ID]`)
 - [ ] Code follows red-green-refactor loop
 - [ ] No `console.log` debugging statements left in code
 - [ ] Component props have TypeScript interfaces
 - [ ] Error handling implemented where needed (ERR-001, ERR-002, ERR-003)
 
+**Documentation:**
+- [ ] **✅ MANDATORY: `docs/IMPLEMENTATION.md` updated**
+  - Tasks marked `[x]` when complete
+  - EARS requirements checked off
+  - Progress tracking section updated
+  - **This is NOT optional - always do this!**
+
 ---
 
-**Remember:** Test first, EARS always, trace everything. 🎵
+**Remember:**
+- 🧪 Test first, EARS always, trace everything
+- 🎯 Test behavior, not implementation
+- 📋 **Always update IMPLEMENTATION.md**
+- 🔄 Red-Green-Refactor loop is mandatory
 
-**Document Version:** 1.0
+**Document Version:** 2.0
 **Last Updated:** 2025-11-13
 **Author:** Claude Code + Jess

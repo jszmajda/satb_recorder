@@ -534,12 +534,45 @@ This document outlines the implementation phases and tasks for building the SATB
 - `src/components/Waveform.test.tsx` - 30 comprehensive tests
 
 ### 4.9 VUMeter Component
-- [ ] Write tests for VU meter display (MIC-005, REC-004)
-- [ ] Implement VU meter bar/line visualization
-- [ ] Write tests for VU meter replaces sparkline (VIS-003)
-- [ ] Implement conditional rendering (VU meter during recording, sparkline otherwise)
+- [x] Write tests for VU meter display (MIC-005, REC-004)
+- [x] Implement VU meter bar/line visualization
+- [x] Write tests for VU meter replaces sparkline (VIS-003)
+- [x] Implement conditional rendering (VU meter during recording, sparkline otherwise)
 
 **EARS Requirements:** MIC-005, REC-004, VIS-003
+
+**Tests:** 31 tests
+- MIC-005, REC-004: VU meter display (9 tests)
+  - Renders meter bar with proper ARIA attributes
+  - Fill width reflects level (0-100%)
+  - Updates when level changes
+  - Clamps negative and >1.0 values
+  - Handles very small values
+- VIS-003: Color coding (8 tests)
+  - Green for low levels (0-0.7)
+  - Yellow for medium levels (0.7-0.9)
+  - Red for high levels (0.9-1.0)
+  - Color changes dynamically with level
+  - Boundary testing for color thresholds
+- VIS-003: Peak indicator (4 tests)
+  - Shows peak indicator
+  - Peak follows level when increasing
+  - Peak holds maximum when level decreases
+- Dimensions and styling (4 tests)
+  - Custom width/height support
+  - Default dimensions
+- Accessibility (3 tests)
+  - Proper ARIA attributes (role="meter", aria-valuenow, etc.)
+  - Updates aria-valuenow dynamically
+  - Descriptive label
+- Component lifecycle (3 tests)
+  - Renders without errors
+  - Handles rapid level changes smoothly
+  - Unmounts gracefully
+
+**Files:**
+- `src/components/VUMeter.tsx` - VU meter visualization component
+- `src/components/VUMeter.test.tsx` - 31 comprehensive tests
 
 ---
 

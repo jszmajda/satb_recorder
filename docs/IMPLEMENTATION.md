@@ -302,19 +302,32 @@ This document outlines the implementation phases and tasks for building the SATB
 
 ## Phase 4: UI Components - Layout & Controls
 
-### 4.1 TopBar Component
-- [ ] Write tests for New Project button (PROJ-001)
-- [ ] Implement New Project button with name prompt
-- [ ] Write tests for Load button (PROJ-006)
-- [ ] Implement Load button with project list modal
-- [ ] Write tests for Export dropdown (EXP-007)
-- [ ] Implement Export dropdown (WAV/MP3 options)
-- [ ] Write tests for project name display (PROJ-009)
-- [ ] Implement project name display (editable)
-- [ ] Write tests for Delete Project button (PROJ-008)
-- [ ] Implement Delete Project button with confirmation
+### 4.1 TopBar Component ✅
+- [x] Write tests for New Project button (PROJ-001)
+- [x] Implement New Project button with name prompt
+- [x] Write tests for Load button (PROJ-006)
+- [x] Implement Load button with project list modal
+- [x] Write tests for Export dropdown (EXP-007)
+- [x] Implement Export dropdown (WAV/MP3 options)
+- [x] Write tests for project name display (PROJ-009)
+- [x] Implement project name display (editable on click)
+- [x] Write tests for Delete Project button (PROJ-008)
+- [x] Implement Delete Project button with confirmation
 
 **EARS Requirements:** PROJ-001, PROJ-006, PROJ-008, PROJ-009, EXP-007
+
+**Test Coverage:** 19 tests in src/components/TopBar.test.tsx
+
+**Completed:** 2025-11-14
+
+**Features:**
+- Editable project name (click to edit, save on blur or Enter)
+- New Project button with name prompt dialog
+- Load button with modal showing all projects
+- Export dropdown (WAV/MP3) with Exporter integration
+- Delete Project button with confirmation dialog
+- Disabled states when no project/tracks loaded
+- Dark theme with color-coded buttons
 
 ### 4.2 MetronomeControl Component
 - [ ] Write tests for BPM input (MET-003)

@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeEach, vi, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { RecordButton } from './RecordButton';
 import { Recorder } from '../audio/recorder';
 import { Metronome } from '../audio/metronome';
@@ -164,62 +164,63 @@ describe('REC-002: Display countdown (3-2-1)', () => {
     render(<RecordButton voicePartId="soprano" onRecordingComplete={vi.fn()} />);
 
     const button = screen.getByRole('button', { name: /record|add track/i });
-    fireEvent.click(button);
 
-    await waitFor(() => {
-      expect(mockRecorder.requestPermission).toHaveBeenCalled();
+    await act(async () => {
+      fireEvent.click(button);
+      // Flush promises to allow requestPermission to resolve
+      await Promise.resolve();
     });
 
-    // Should show countdown
-    await waitFor(() => {
-      expect(screen.getByText(/3|countdown/i)).toBeInTheDocument();
-    });
+    expect(mockRecorder.requestPermission).toHaveBeenCalled();
+
+    // Should show countdown value 3
+    expect(screen.getByText('3')).toBeInTheDocument();
   });
 
   test('countdown shows 3, 2, 1 in sequence', async () => {
     render(<RecordButton voicePartId="soprano" onRecordingComplete={vi.fn()} />);
 
     const button = screen.getByRole('button', { name: /record|add track/i });
-    fireEvent.click(button);
 
-    await waitFor(() => {
-      expect(mockRecorder.requestPermission).toHaveBeenCalled();
+    await act(async () => {
+      fireEvent.click(button);
+      await Promise.resolve();
     });
 
-    // Wait for countdown to appear
-    await waitFor(() => {
-      expect(screen.getByText('3')).toBeInTheDocument();
-    });
+    expect(screen.getByText('3')).toBeInTheDocument();
 
     // Advance 1 second
-    vi.advanceTimersByTime(1000);
-    await waitFor(() => {
-      expect(screen.getByText('2')).toBeInTheDocument();
+    await act(async () => {
+      vi.advanceTimersByTime(1000);
     });
+    expect(screen.getByText('2')).toBeInTheDocument();
 
     // Advance 1 second
-    vi.advanceTimersByTime(1000);
-    await waitFor(() => {
-      expect(screen.getByText('1')).toBeInTheDocument();
+    await act(async () => {
+      vi.advanceTimersByTime(1000);
     });
+    expect(screen.getByText('1')).toBeInTheDocument();
   });
 
   test('starts recording after countdown completes', async () => {
     render(<RecordButton voicePartId="soprano" onRecordingComplete={vi.fn()} />);
 
     const button = screen.getByRole('button', { name: /record|add track/i });
-    fireEvent.click(button);
 
-    await waitFor(() => {
-      expect(mockRecorder.requestPermission).toHaveBeenCalled();
+    await act(async () => {
+      fireEvent.click(button);
+      await Promise.resolve();
     });
+
+    expect(mockRecorder.requestPermission).toHaveBeenCalled();
 
     // Wait for countdown (3 seconds)
-    vi.advanceTimersByTime(3000);
-
-    await waitFor(() => {
-      expect(mockRecorder.startRecording).toHaveBeenCalled();
+    await act(async () => {
+      vi.advanceTimersByTime(3000);
+      await Promise.resolve();
     });
+
+    expect(mockRecorder.startRecording).toHaveBeenCalled();
   });
 });
 
@@ -268,55 +269,64 @@ describe('REC-003: Start MediaRecorder and metronome', () => {
     render(<RecordButton voicePartId="soprano" onRecordingComplete={vi.fn()} bpm={120} />);
 
     const button = screen.getByRole('button', { name: /record|add track/i });
-    fireEvent.click(button);
 
-    await waitFor(() => {
-      expect(mockRecorder.requestPermission).toHaveBeenCalled();
+    await act(async () => {
+      fireEvent.click(button);
+      await Promise.resolve();
     });
+
+    expect(mockRecorder.requestPermission).toHaveBeenCalled();
 
     // Wait for countdown
-    vi.advanceTimersByTime(3000);
-
-    await waitFor(() => {
-      expect(mockMetronome.start).toHaveBeenCalled();
+    await act(async () => {
+      vi.advanceTimersByTime(3000);
+      await Promise.resolve();
     });
+
+    expect(mockMetronome.start).toHaveBeenCalled();
   });
 
   test('starts MediaRecorder when recording begins', async () => {
     render(<RecordButton voicePartId="soprano" onRecordingComplete={vi.fn()} />);
 
     const button = screen.getByRole('button', { name: /record|add track/i });
-    fireEvent.click(button);
 
-    await waitFor(() => {
-      expect(mockRecorder.requestPermission).toHaveBeenCalled();
+    await act(async () => {
+      fireEvent.click(button);
+      await Promise.resolve();
     });
+
+    expect(mockRecorder.requestPermission).toHaveBeenCalled();
 
     // Wait for countdown
-    vi.advanceTimersByTime(3000);
-
-    await waitFor(() => {
-      expect(mockRecorder.startRecording).toHaveBeenCalled();
+    await act(async () => {
+      vi.advanceTimersByTime(3000);
+      await Promise.resolve();
     });
+
+    expect(mockRecorder.startRecording).toHaveBeenCalled();
   });
 
   test('starts both metronome and recorder together', async () => {
     render(<RecordButton voicePartId="soprano" onRecordingComplete={vi.fn()} bpm={120} />);
 
     const button = screen.getByRole('button', { name: /record|add track/i });
-    fireEvent.click(button);
 
-    await waitFor(() => {
-      expect(mockRecorder.requestPermission).toHaveBeenCalled();
+    await act(async () => {
+      fireEvent.click(button);
+      await Promise.resolve();
     });
+
+    expect(mockRecorder.requestPermission).toHaveBeenCalled();
 
     // Wait for countdown
-    vi.advanceTimersByTime(3000);
-
-    await waitFor(() => {
-      expect(mockRecorder.startRecording).toHaveBeenCalled();
-      expect(mockMetronome.start).toHaveBeenCalled();
+    await act(async () => {
+      vi.advanceTimersByTime(3000);
+      await Promise.resolve();
     });
+
+    expect(mockRecorder.startRecording).toHaveBeenCalled();
+    expect(mockMetronome.start).toHaveBeenCalled();
   });
 });
 
@@ -347,8 +357,12 @@ describe('REC-004: Display VU meter during recording', () => {
       getVolume: vi.fn().mockReturnValue(0.5),
     };
 
-    vi.mocked(Recorder).mockImplementation(() => mockRecorder);
-    vi.mocked(VUMeter).mockImplementation(() => mockVUMeter);
+    vi.mocked(Recorder).mockImplementation(function() {
+      return mockRecorder;
+    } as any);
+    vi.mocked(VUMeter).mockImplementation(function() {
+      return mockVUMeter;
+    } as any);
   });
 
   afterEach(() => {
@@ -360,18 +374,21 @@ describe('REC-004: Display VU meter during recording', () => {
     render(<RecordButton voicePartId="soprano" onRecordingComplete={vi.fn()} />);
 
     const button = screen.getByRole('button', { name: /record|add track/i });
-    fireEvent.click(button);
 
-    await waitFor(() => {
-      expect(mockRecorder.requestPermission).toHaveBeenCalled();
+    await act(async () => {
+      fireEvent.click(button);
+      await Promise.resolve();
     });
+
+    expect(mockRecorder.requestPermission).toHaveBeenCalled();
 
     // Wait for countdown
-    vi.advanceTimersByTime(3000);
-
-    await waitFor(() => {
-      expect(screen.getByRole('meter', { name: /vu meter|volume/i })).toBeInTheDocument();
+    await act(async () => {
+      vi.advanceTimersByTime(3000);
+      await Promise.resolve();
     });
+
+    expect(screen.getByRole('meter', { name: /vu meter|volume/i })).toBeInTheDocument();
   });
 
   test('connects VU meter to microphone stream', async () => {
@@ -381,18 +398,21 @@ describe('REC-004: Display VU meter during recording', () => {
     render(<RecordButton voicePartId="soprano" onRecordingComplete={vi.fn()} />);
 
     const button = screen.getByRole('button', { name: /record|add track/i });
-    fireEvent.click(button);
 
-    await waitFor(() => {
-      expect(mockRecorder.requestPermission).toHaveBeenCalled();
+    await act(async () => {
+      fireEvent.click(button);
+      await Promise.resolve();
     });
+
+    expect(mockRecorder.requestPermission).toHaveBeenCalled();
 
     // Wait for countdown
-    vi.advanceTimersByTime(3000);
-
-    await waitFor(() => {
-      expect(mockVUMeter.connect).toHaveBeenCalledWith(mockStream);
+    await act(async () => {
+      vi.advanceTimersByTime(3000);
+      await Promise.resolve();
     });
+
+    expect(mockVUMeter.connect).toHaveBeenCalledWith(mockStream);
   });
 
   test('VU meter shows current level', async () => {
@@ -401,19 +421,22 @@ describe('REC-004: Display VU meter during recording', () => {
     render(<RecordButton voicePartId="soprano" onRecordingComplete={vi.fn()} />);
 
     const button = screen.getByRole('button', { name: /record|add track/i });
-    fireEvent.click(button);
 
-    await waitFor(() => {
-      expect(mockRecorder.requestPermission).toHaveBeenCalled();
+    await act(async () => {
+      fireEvent.click(button);
+      await Promise.resolve();
     });
 
-    // Wait for countdown
-    vi.advanceTimersByTime(3000);
+    expect(mockRecorder.requestPermission).toHaveBeenCalled();
 
-    await waitFor(() => {
-      const meter = screen.getByRole('meter', { name: /vu meter|volume/i });
-      expect(meter).toHaveAttribute('aria-valuenow', '70');
+    // Wait for countdown and first VU meter update interval (50ms)
+    await act(async () => {
+      vi.advanceTimersByTime(3000 + 50);
+      await Promise.resolve();
     });
+
+    const meter = screen.getByRole('meter', { name: /vu meter|volume/i });
+    expect(meter).toHaveAttribute('aria-valuenow', '70');
   });
 });
 
@@ -460,26 +483,31 @@ describe('REC-007: Convert to WAV blob on stop', () => {
     render(<RecordButton voicePartId="soprano" onRecordingComplete={vi.fn()} />);
 
     const startButton = screen.getByRole('button', { name: /record|add track/i });
-    fireEvent.click(startButton);
 
-    await waitFor(() => {
-      expect(mockRecorder.requestPermission).toHaveBeenCalled();
+    await act(async () => {
+      fireEvent.click(startButton);
+      await Promise.resolve();
     });
+
+    expect(mockRecorder.requestPermission).toHaveBeenCalled();
 
     // Wait for countdown
-    vi.advanceTimersByTime(3000);
-
-    await waitFor(() => {
-      expect(mockRecorder.startRecording).toHaveBeenCalled();
+    await act(async () => {
+      vi.advanceTimersByTime(3000);
+      await Promise.resolve();
     });
+
+    expect(mockRecorder.startRecording).toHaveBeenCalled();
 
     // Now recording, find stop button
     const stopButton = screen.getByRole('button', { name: /stop/i });
-    fireEvent.click(stopButton);
 
-    await waitFor(() => {
-      expect(mockRecorder.stopRecording).toHaveBeenCalled();
+    await act(async () => {
+      fireEvent.click(stopButton);
+      await Promise.resolve();
     });
+
+    expect(mockRecorder.stopRecording).toHaveBeenCalled();
   });
 
   test('converts recording to WAV blob', async () => {
@@ -493,55 +521,65 @@ describe('REC-007: Convert to WAV blob on stop', () => {
     );
 
     const startButton = screen.getByRole('button', { name: /record|add track/i });
-    fireEvent.click(startButton);
 
-    await waitFor(() => {
-      expect(mockRecorder.requestPermission).toHaveBeenCalled();
+    await act(async () => {
+      fireEvent.click(startButton);
+      await Promise.resolve();
     });
+
+    expect(mockRecorder.requestPermission).toHaveBeenCalled();
 
     // Wait for countdown
-    vi.advanceTimersByTime(3000);
-
-    await waitFor(() => {
-      expect(mockRecorder.startRecording).toHaveBeenCalled();
+    await act(async () => {
+      vi.advanceTimersByTime(3000);
+      await Promise.resolve();
     });
+
+    expect(mockRecorder.startRecording).toHaveBeenCalled();
 
     const stopButton = screen.getByRole('button', { name: /stop/i });
-    fireEvent.click(stopButton);
 
-    await waitFor(() => {
-      expect(handleRecordingComplete).toHaveBeenCalledWith(
-        expect.objectContaining({
-          blob: expect.any(Blob),
-          duration: 5.5,
-        })
-      );
+    await act(async () => {
+      fireEvent.click(stopButton);
+      await Promise.resolve();
     });
+
+    expect(handleRecordingComplete).toHaveBeenCalledWith(
+      expect.objectContaining({
+        blob: expect.any(Blob),
+        duration: 5.5,
+      })
+    );
   });
 
   test('stops metronome when recording stops', async () => {
     render(<RecordButton voicePartId="soprano" onRecordingComplete={vi.fn()} />);
 
     const startButton = screen.getByRole('button', { name: /record|add track/i });
-    fireEvent.click(startButton);
 
-    await waitFor(() => {
-      expect(mockRecorder.requestPermission).toHaveBeenCalled();
+    await act(async () => {
+      fireEvent.click(startButton);
+      await Promise.resolve();
     });
+
+    expect(mockRecorder.requestPermission).toHaveBeenCalled();
 
     // Wait for countdown
-    vi.advanceTimersByTime(3000);
-
-    await waitFor(() => {
-      expect(mockRecorder.startRecording).toHaveBeenCalled();
+    await act(async () => {
+      vi.advanceTimersByTime(3000);
+      await Promise.resolve();
     });
+
+    expect(mockRecorder.startRecording).toHaveBeenCalled();
 
     const stopButton = screen.getByRole('button', { name: /stop/i });
-    fireEvent.click(stopButton);
 
-    await waitFor(() => {
-      expect(mockMetronome.stop).toHaveBeenCalled();
+    await act(async () => {
+      fireEvent.click(stopButton);
+      await Promise.resolve();
     });
+
+    expect(mockMetronome.stop).toHaveBeenCalled();
   });
 });
 
@@ -560,7 +598,9 @@ describe('RecordButton: Component states', () => {
       dispose: vi.fn(),
     };
 
-    vi.mocked(Recorder).mockImplementation(() => mockRecorder);
+    vi.mocked(Recorder).mockImplementation(function() {
+      return mockRecorder;
+    } as any);
   });
 
   afterEach(() => {
@@ -580,12 +620,13 @@ describe('RecordButton: Component states', () => {
     render(<RecordButton voicePartId="soprano" onRecordingComplete={vi.fn()} />);
 
     const button = screen.getByRole('button', { name: /record|add track/i });
-    fireEvent.click(button);
 
-    await waitFor(() => {
-      expect(screen.getByText(/3|countdown/i)).toBeInTheDocument();
+    await act(async () => {
+      fireEvent.click(button);
+      await Promise.resolve();
     });
 
+    expect(screen.getByText('3')).toBeInTheDocument();
     expect(button).toBeDisabled();
 
     vi.useRealTimers();
@@ -599,18 +640,21 @@ describe('RecordButton: Component states', () => {
     render(<RecordButton voicePartId="soprano" onRecordingComplete={vi.fn()} />);
 
     const startButton = screen.getByRole('button', { name: /record|add track/i });
-    fireEvent.click(startButton);
 
-    await waitFor(() => {
-      expect(mockRecorder.requestPermission).toHaveBeenCalled();
+    await act(async () => {
+      fireEvent.click(startButton);
+      await Promise.resolve();
     });
+
+    expect(mockRecorder.requestPermission).toHaveBeenCalled();
 
     // Wait for countdown
-    vi.advanceTimersByTime(3000);
-
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: /stop/i })).toBeInTheDocument();
+    await act(async () => {
+      vi.advanceTimersByTime(3000);
+      await Promise.resolve();
     });
+
+    expect(screen.getByRole('button', { name: /stop/i })).toBeInTheDocument();
 
     vi.useRealTimers();
   });
@@ -626,25 +670,30 @@ describe('RecordButton: Component states', () => {
     render(<RecordButton voicePartId="soprano" onRecordingComplete={vi.fn()} />);
 
     const startButton = screen.getByRole('button', { name: /record|add track/i });
-    fireEvent.click(startButton);
 
-    await waitFor(() => {
-      expect(mockRecorder.requestPermission).toHaveBeenCalled();
+    await act(async () => {
+      fireEvent.click(startButton);
+      await Promise.resolve();
     });
+
+    expect(mockRecorder.requestPermission).toHaveBeenCalled();
 
     // Wait for countdown
-    vi.advanceTimersByTime(3000);
-
-    await waitFor(() => {
-      expect(mockRecorder.startRecording).toHaveBeenCalled();
+    await act(async () => {
+      vi.advanceTimersByTime(3000);
+      await Promise.resolve();
     });
+
+    expect(mockRecorder.startRecording).toHaveBeenCalled();
 
     const stopButton = screen.getByRole('button', { name: /stop/i });
-    fireEvent.click(stopButton);
 
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: /record|add track/i })).toBeInTheDocument();
+    await act(async () => {
+      fireEvent.click(stopButton);
+      await Promise.resolve();
     });
+
+    expect(screen.getByRole('button', { name: /record|add track/i })).toBeInTheDocument();
 
     vi.useRealTimers();
   });

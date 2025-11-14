@@ -174,18 +174,54 @@ beforeAll(() => {
   })) as any;
 
   // Mock MediaRecorder
-  global.MediaRecorder = vi.fn().mockImplementation(() => ({
-    start: vi.fn(),
-    stop: vi.fn(),
-    pause: vi.fn(),
-    resume: vi.fn(),
-    state: 'inactive',
-    ondataavailable: null,
-    onstop: null,
-    onerror: null,
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-  })) as any;
+  global.MediaRecorder = vi.fn().mockImplementation(function(this: any) {
+    const listeners: Map<string, Function[]> = new Map();
+
+    this.start = vi.fn(() => {
+      this.state = 'recording';
+    });
+
+    this.stop = vi.fn(() => {
+      this.state = 'inactive';
+      // Trigger stop event
+      const stopListeners = listeners.get('stop') || [];
+      stopListeners.forEach(listener => listener(new Event('stop')));
+
+      // Trigger dataavailable event with some mock data
+      const dataListeners = listeners.get('dataavailable') || [];
+      dataListeners.forEach(listener => {
+        listener({
+          data: new Blob(['mock audio data'], { type: 'audio/webm' })
+        });
+      });
+    });
+
+    this.pause = vi.fn();
+    this.resume = vi.fn();
+    this.state = 'inactive';
+    this.ondataavailable = null;
+    this.onstop = null;
+    this.onerror = null;
+
+    this.addEventListener = vi.fn((event: string, listener: Function) => {
+      if (!listeners.has(event)) {
+        listeners.set(event, []);
+      }
+      listeners.get(event)!.push(listener);
+    });
+
+    this.removeEventListener = vi.fn((event: string, listener: Function) => {
+      const eventListeners = listeners.get(event);
+      if (eventListeners) {
+        const index = eventListeners.indexOf(listener);
+        if (index > -1) {
+          eventListeners.splice(index, 1);
+        }
+      }
+    });
+
+    return this;
+  }) as any;
 
   // Mock MediaDevices
   Object.defineProperty(global.navigator, 'mediaDevices', {

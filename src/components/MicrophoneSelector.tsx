@@ -44,14 +44,35 @@ export function MicrophoneSelector() {
    * [EARS: MIC-002] List all available microphones
    */
   const enumerateDevices = async () => {
-    if (!recorderRef.current) return;
+    if (!recorderRef.current) {
+      console.log('Recorder ref not available');
+      return;
+    }
 
     setIsLoading(true);
     setError(null);
 
     try {
+      console.log('Enumerating devices...');
       const deviceList = await recorderRef.current.enumerateDevices();
-      setDevices(deviceList);
+      console.log('Found devices:', deviceList);
+
+      // Map to simpler format with labels
+      // Filter out devices with empty IDs (placeholder devices before permission)
+      const mappedDevices = deviceList
+        .filter(device => device.deviceId !== '')
+        .map(device => ({
+          deviceId: device.deviceId,
+          label: device.label || `Microphone ${device.deviceId.substring(0, 8)}`,
+        }));
+
+      console.log('Mapped devices:', mappedDevices);
+      setDevices(mappedDevices);
+
+      // If no real devices found, show a message
+      if (mappedDevices.length === 0 && deviceList.length > 0) {
+        setError('Click "Refresh" to grant microphone permission and see available devices');
+      }
 
       // Check if there's already a selected device
       const currentDevice = recorderRef.current.getSelectedDeviceId();
@@ -90,9 +111,34 @@ export function MicrophoneSelector() {
   /**
    * Handle refresh button click
    * [EARS: MIC-002] Re-enumerate devices
+   * Request permission first to get actual device labels
    */
-  const handleRefresh = () => {
-    enumerateDevices();
+  const handleRefresh = async () => {
+    if (!recorderRef.current) return;
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // Request permission to unlock device labels
+      console.log('Requesting microphone permission...');
+      const stream = await recorderRef.current.requestMicrophoneAccess();
+      console.log('Permission granted, stopping stream...');
+
+      // Stop the stream immediately - we just needed it to unlock permissions
+      stream.getTracks().forEach(track => track.stop());
+
+      // Now enumerate devices with full labels
+      await enumerateDevices();
+    } catch (err) {
+      if (err instanceof Error && err.message.includes('permission denied')) {
+        setError('Microphone permission denied. Please allow access to see available microphones.');
+      } else {
+        setError('Error accessing microphones');
+      }
+      console.error('Failed to request permission:', err);
+      setIsLoading(false);
+    }
   };
 
   return (

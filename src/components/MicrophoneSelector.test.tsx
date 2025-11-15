@@ -20,6 +20,10 @@ describe('MIC-002: Device enumeration display', () => {
   let mockRecorder: any;
 
   beforeEach(() => {
+    const mockStream = {
+      getTracks: vi.fn().mockReturnValue([{ stop: vi.fn() }]),
+    };
+
     mockRecorder = {
       enumerateDevices: vi.fn().mockResolvedValue([
         { deviceId: 'mic-1', label: 'Built-in Microphone' },
@@ -29,6 +33,7 @@ describe('MIC-002: Device enumeration display', () => {
       getSelectedDeviceId: vi.fn().mockReturnValue(null),
       setSelectedDevice: vi.fn(),
       requestPermission: vi.fn(),
+      requestMicrophoneAccess: vi.fn().mockResolvedValue(mockStream),
       dispose: vi.fn(),
     };
     vi.mocked(Recorder).mockImplementation(function() {
@@ -128,6 +133,10 @@ describe('MIC-003: Device selection', () => {
   let mockRecorder: any;
 
   beforeEach(() => {
+    const mockStream = {
+      getTracks: vi.fn().mockReturnValue([{ stop: vi.fn() }]),
+    };
+
     mockRecorder = {
       enumerateDevices: vi.fn().mockResolvedValue([
         { deviceId: 'mic-1', label: 'Built-in Microphone' },
@@ -135,6 +144,7 @@ describe('MIC-003: Device selection', () => {
       ]),
       getSelectedDeviceId: vi.fn().mockReturnValue(null),
       setSelectedDevice: vi.fn(),
+      requestMicrophoneAccess: vi.fn().mockResolvedValue(mockStream),
       requestPermission: vi.fn(),
       dispose: vi.fn(),
     };
@@ -213,6 +223,10 @@ describe('MIC-002: Refresh devices', () => {
   let mockRecorder: any;
 
   beforeEach(() => {
+    const mockStream = {
+      getTracks: vi.fn().mockReturnValue([{ stop: vi.fn() }]),
+    };
+
     mockRecorder = {
       enumerateDevices: vi.fn().mockResolvedValue([
         { deviceId: 'mic-1', label: 'Built-in Microphone' },
@@ -220,6 +234,7 @@ describe('MIC-002: Refresh devices', () => {
       getSelectedDeviceId: vi.fn().mockReturnValue(null),
       setSelectedDevice: vi.fn(),
       requestPermission: vi.fn(),
+      requestMicrophoneAccess: vi.fn().mockResolvedValue(mockStream),
       dispose: vi.fn(),
     };
     vi.mocked(Recorder).mockImplementation(function() {
@@ -283,11 +298,16 @@ describe('MicrophoneSelector: Component lifecycle', () => {
   let mockRecorder: any;
 
   beforeEach(() => {
+    const mockStream = {
+      getTracks: vi.fn().mockReturnValue([{ stop: vi.fn() }]),
+    };
+
     mockRecorder = {
       enumerateDevices: vi.fn().mockResolvedValue([]),
       getSelectedDeviceId: vi.fn().mockReturnValue(null),
       setSelectedDevice: vi.fn(),
       requestPermission: vi.fn(),
+      requestMicrophoneAccess: vi.fn().mockResolvedValue(mockStream),
       dispose: vi.fn(),
     };
     vi.mocked(Recorder).mockImplementation(function() {

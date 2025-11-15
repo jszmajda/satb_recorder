@@ -294,6 +294,115 @@ describe('MIC-002: Refresh devices', () => {
   });
 });
 
+describe('MicrophoneSelector: Auto-select default device', () => {
+  let mockRecorder: any;
+
+  beforeEach(() => {
+    const mockStream = {
+      getTracks: vi.fn().mockReturnValue([{ stop: vi.fn() }]),
+    };
+
+    mockRecorder = {
+      enumerateDevices: vi.fn(),
+      getSelectedDeviceId: vi.fn().mockReturnValue(null),
+      setSelectedDevice: vi.fn(),
+      requestMicrophoneAccess: vi.fn().mockResolvedValue(mockStream),
+      dispose: vi.fn(),
+    };
+    vi.mocked(Recorder).mockImplementation(function() {
+      return mockRecorder;
+    } as any);
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  // ✅ Happy path
+  test('auto-selects device with "default" in label', async () => {
+    mockRecorder.enumerateDevices.mockResolvedValue([
+      { deviceId: 'mic-1', label: 'Built-in Microphone' },
+      { deviceId: 'mic-2', label: 'Default - USB Microphone' },
+      { deviceId: 'mic-3', label: 'Bluetooth Headset' },
+    ]);
+
+    render(<MicrophoneSelector />);
+
+    await waitFor(() => {
+      expect(mockRecorder.setSelectedDevice).toHaveBeenCalledWith('mic-2');
+    });
+  });
+
+  test('auto-selects device with "Default" (case insensitive)', async () => {
+    mockRecorder.enumerateDevices.mockResolvedValue([
+      { deviceId: 'mic-1', label: 'Built-in Microphone' },
+      { deviceId: 'mic-2', label: 'DEFAULT MICROPHONE' },
+    ]);
+
+    render(<MicrophoneSelector />);
+
+    await waitFor(() => {
+      expect(mockRecorder.setSelectedDevice).toHaveBeenCalledWith('mic-2');
+    });
+  });
+
+  test('auto-selects last device when no "default" found', async () => {
+    mockRecorder.enumerateDevices.mockResolvedValue([
+      { deviceId: 'mic-1', label: 'Built-in Microphone' },
+      { deviceId: 'mic-2', label: 'USB Microphone' },
+      { deviceId: 'mic-3', label: 'Bluetooth Headset' },
+    ]);
+
+    render(<MicrophoneSelector />);
+
+    await waitFor(() => {
+      expect(mockRecorder.setSelectedDevice).toHaveBeenCalledWith('mic-3');
+    });
+  });
+
+  test('auto-selects only device when single mic available', async () => {
+    mockRecorder.enumerateDevices.mockResolvedValue([
+      { deviceId: 'mic-1', label: 'Built-in Microphone' },
+    ]);
+
+    render(<MicrophoneSelector />);
+
+    await waitFor(() => {
+      expect(mockRecorder.setSelectedDevice).toHaveBeenCalledWith('mic-1');
+    });
+  });
+
+  // 🔥 Edge cases
+  test('does not auto-select when device already selected', async () => {
+    mockRecorder.getSelectedDeviceId.mockReturnValue('mic-1');
+    mockRecorder.enumerateDevices.mockResolvedValue([
+      { deviceId: 'mic-1', label: 'Built-in Microphone' },
+      { deviceId: 'mic-2', label: 'USB Microphone' },
+    ]);
+
+    render(<MicrophoneSelector />);
+
+    await waitFor(() => {
+      expect(mockRecorder.enumerateDevices).toHaveBeenCalled();
+    });
+
+    // Should NOT call setSelectedDevice since one is already selected
+    expect(mockRecorder.setSelectedDevice).not.toHaveBeenCalled();
+  });
+
+  test('does not auto-select when no devices available', async () => {
+    mockRecorder.enumerateDevices.mockResolvedValue([]);
+
+    render(<MicrophoneSelector />);
+
+    await waitFor(() => {
+      expect(mockRecorder.enumerateDevices).toHaveBeenCalled();
+    });
+
+    expect(mockRecorder.setSelectedDevice).not.toHaveBeenCalled();
+  });
+});
+
 describe('MicrophoneSelector: Component lifecycle', () => {
   let mockRecorder: any;
 

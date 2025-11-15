@@ -78,9 +78,22 @@ export function MicrophoneSelector() {
         setError('Click "Refresh" to grant microphone permission and see available devices');
       }
 
-      // Check if there's already a selected device
+      // Auto-select a default device if none selected
       const currentDevice = recorderRef.current.getSelectedDeviceId();
-      if (currentDevice) {
+      if (!currentDevice && mappedDevices.length > 0) {
+        // Try to find device with "default" in the label (case insensitive)
+        const defaultDevice = mappedDevices.find(device =>
+          device.label.toLowerCase().includes('default')
+        );
+
+        // Use default device if found, otherwise use last device in list
+        const deviceToSelect = defaultDevice || mappedDevices[mappedDevices.length - 1];
+
+        console.log('Auto-selecting device:', deviceToSelect);
+        recorderRef.current.setSelectedDevice(deviceToSelect.deviceId);
+        setSelectedDeviceId(deviceToSelect.deviceId);
+      } else if (currentDevice) {
+        // Keep existing selection
         setSelectedDeviceId(currentDevice);
       }
     } catch (err) {

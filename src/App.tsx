@@ -4,13 +4,17 @@ import { MicrophoneSelector } from './components/MicrophoneSelector';
 import { ToneGenerator } from './components/ToneGenerator';
 import { TransportControl } from './components/TransportControl';
 import { ErrorNotification } from './components/ErrorNotification';
+import { VoicePartSection } from './components/VoicePartSection';
+import { RecordButton } from './components/RecordButton';
 import { useProjectStore } from './store/useProjectStore';
 import { useErrorStore } from './store/useErrorStore';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
+import type { VoicePartType } from './store/types';
 
 function App() {
   const currentProject = useProjectStore((state) => state.currentProject);
-  const restoreLastDeletedTrack = useProjectStore((state) => state.restoreLastDeletedTrack);
+  const addTrack = useProjectStore((state) => state.addTrack);
+  const undoDeleteTrack = useProjectStore((state) => state.undoDeleteTrack);
 
   // Error handling [EARS: ERR-001, ERR-002, ERR-003]
   const error = useErrorStore((state) => state.error);
@@ -23,7 +27,7 @@ function App() {
   useKeyboardShortcuts({
     onUndo: () => {
       try {
-        restoreLastDeletedTrack();
+        undoDeleteTrack();
       } catch (error) {
         // Silently ignore if nothing to undo
         console.log('Nothing to undo');
@@ -70,10 +74,42 @@ function App() {
                 <MicrophoneSelector />
               </div>
 
-              <div className="mt-8">
-                <p className="text-gray-500 text-sm">
-                  Track recording controls coming soon...
-                </p>
+              <div className="mt-8 space-y-4">
+                <h2 className="text-xl font-bold mb-4">Voice Parts</h2>
+                {currentProject.voiceParts.map((voicePart) => {
+                  // Map voice part type to color
+                  const colorMap = {
+                    S: 'red' as const,
+                    A: 'blue' as const,
+                    T: 'green' as const,
+                    B: 'purple' as const,
+                  };
+
+                  return (
+                    <VoicePartSection
+                      key={voicePart.type}
+                      voicePartId={voicePart.type}
+                      name={voicePart.label}
+                      color={colorMap[voicePart.type]}
+                      trackCount={voicePart.tracks.length}
+                    >
+                      {/* RecordButton for adding new tracks */}
+                      <RecordButton
+                        voicePartId={voicePart.type}
+                        bpm={currentProject.bpm}
+                        onRecordingComplete={async (result) => {
+                          // Add track to project via store
+                          await addTrack(voicePart.type as VoicePartType, {
+                            audioBlob: result.blob,
+                            duration: result.duration,
+                            waveformData: [], // TODO: Generate waveform data
+                          });
+                        }}
+                      />
+                      {/* TODO: Render existing tracks here */}
+                    </VoicePartSection>
+                  );
+                })}
               </div>
             </>
           )}

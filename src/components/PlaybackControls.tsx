@@ -4,8 +4,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Mixer } from '../audio/mixer';
 
+export interface PlaybackTrack {
+  id: string;
+  audioBlob: Blob;
+  volume: number;
+  muted: boolean;
+  soloed: boolean;
+}
+
 export interface PlaybackControlsProps {
   totalDuration?: number;
+  tracks?: PlaybackTrack[];
   /**
    * Optional external control of current time
    * If provided, component acts as controlled component for time
@@ -39,6 +48,7 @@ function formatTime(seconds: number): string {
  */
 export function PlaybackControls({
   totalDuration = 0,
+  tracks = [],
   currentTime: externalCurrentTime,
   onCurrentTimeChange,
   onSeek,
@@ -72,6 +82,30 @@ export function PlaybackControls({
       }
     };
   }, []);
+
+  /**
+   * Load tracks into mixer when tracks change
+   * [EARS: PLAY-006, PLAY-007, PLAY-008] Mute, solo, and multi-track playback
+   */
+  useEffect(() => {
+    const loadTracks = async () => {
+      if (!mixerRef.current) return;
+
+      // Load all tracks
+      for (const track of tracks) {
+        try {
+          await mixerRef.current.loadTrack(track.id, track.audioBlob);
+          mixerRef.current.setVolume(track.id, track.volume);
+          mixerRef.current.setMuted(track.id, track.muted);
+          mixerRef.current.setSoloed(track.id, track.soloed);
+        } catch (error) {
+          console.error(`Failed to load track ${track.id}:`, error);
+        }
+      }
+    };
+
+    loadTracks();
+  }, [tracks]);
 
   /**
    * Sync play state with mixer

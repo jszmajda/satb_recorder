@@ -46,6 +46,25 @@ function App() {
     return max;
   }, [currentProject]);
 
+  // Gather all tracks for playback
+  const allTracks = useMemo(() => {
+    if (!currentProject) return [];
+
+    const tracks = [];
+    for (const voicePart of currentProject.voiceParts) {
+      for (const track of voicePart.tracks) {
+        tracks.push({
+          id: track.id,
+          audioBlob: track.audioBlob,
+          volume: track.volume,
+          muted: track.muted,
+          soloed: track.soloed,
+        });
+      }
+    }
+    return tracks;
+  }, [currentProject]);
+
   // [EARS: SEEK-001, SEEK-002, SEEK-003] Handle seek from waveform
   const handleSeek = (trackId: string, time: number) => {
     setCurrentTime(time);
@@ -93,9 +112,10 @@ function App() {
             <>
               <div>
                 <h2 className="text-xl font-bold mb-4">Transport Controls</h2>
-                {/* [EARS: SEEK-001, SEEK-002, SEEK-003] PlaybackControls with seeking support */}
+                {/* [EARS: SEEK-001, SEEK-002, SEEK-003, PLAY-001 through PLAY-008] PlaybackControls with seeking and playback */}
                 <PlaybackControls
                   totalDuration={maxDuration}
+                  tracks={allTracks}
                   currentTime={currentTime}
                   onCurrentTimeChange={setCurrentTime}
                   onSeek={setCurrentTime}

@@ -52,8 +52,14 @@ export function Waveform({
     // Clear canvas
     ctx.clearRect(0, 0, width, height);
 
-    // Handle empty or undefined data
+    // Handle empty or undefined data - show placeholder
     if (!waveformData || waveformData.length === 0) {
+      // Draw placeholder text
+      ctx.fillStyle = '#666';
+      ctx.font = '12px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('No waveform data', width / 2, height / 2);
       return;
     }
 

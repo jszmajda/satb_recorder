@@ -4,10 +4,10 @@
 import React, { useRef, useEffect, useState } from 'react';
 
 export interface WaveformProps {
-  waveformData: number[];
-  currentTime: number;
-  duration: number;
-  onSeek: (time: number) => void;
+  data?: number[];
+  currentTime?: number;
+  duration?: number;
+  onSeek?: (time: number) => void;
   isPlaying?: boolean;
   width?: number;
   height?: number;
@@ -24,9 +24,9 @@ const PLAYHEAD_WIDTH = 2;
  * [EARS: VIS-002, VIS-004, SEEK-001, SEEK-002, SEEK-003, SEEK-004]
  */
 export function Waveform({
-  waveformData,
-  currentTime,
-  duration,
+  data: waveformData = [],
+  currentTime = 0,
+  duration = 0,
   onSeek,
   isPlaying = false,
   width = DEFAULT_WIDTH,
@@ -50,8 +50,8 @@ export function Waveform({
     // Clear canvas
     ctx.clearRect(0, 0, width, height);
 
-    // Handle empty data
-    if (waveformData.length === 0) {
+    // Handle empty or undefined data
+    if (!waveformData || waveformData.length === 0) {
       return;
     }
 

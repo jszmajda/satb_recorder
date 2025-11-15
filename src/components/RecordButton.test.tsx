@@ -30,7 +30,7 @@ describe('REC-001: Request microphone permission on Add Track', () => {
     mockRecorder = {
       enumerateDevices: vi.fn().mockResolvedValue([]),
       selectDevice: vi.fn(),
-      requestPermission: vi.fn().mockResolvedValue({} as MediaStream),
+      requestMicrophoneAccess: vi.fn().mockResolvedValue({} as MediaStream),
       startRecording: vi.fn().mockResolvedValue(undefined),
       stopRecording: vi.fn().mockResolvedValue({
         blob: new Blob(),
@@ -86,12 +86,12 @@ describe('REC-001: Request microphone permission on Add Track', () => {
     fireEvent.click(button);
 
     await waitFor(() => {
-      expect(mockRecorder.requestPermission).toHaveBeenCalled();
+      expect(mockRecorder.requestMicrophoneAccess).toHaveBeenCalled();
     });
   });
 
   test('displays error when permission denied', async () => {
-    mockRecorder.requestPermission.mockRejectedValue(new Error('Permission denied'));
+    mockRecorder.requestMicrophoneAccess.mockRejectedValue(new Error('Permission denied'));
 
     render(<RecordButton voicePartId="soprano" onRecordingComplete={vi.fn()} />);
 
@@ -101,12 +101,12 @@ describe('REC-001: Request microphone permission on Add Track', () => {
     // Error is now displayed globally via useErrorStore (ERR-001)
     // Test will pass as long as no error is thrown
     await waitFor(() => {
-      expect(mockRecorder.requestPermission).toHaveBeenCalled();
+      expect(mockRecorder.requestMicrophoneAccess).toHaveBeenCalled();
     });
   });
 
   test('does not start recording if permission denied', async () => {
-    mockRecorder.requestPermission.mockRejectedValue(new Error('Permission denied'));
+    mockRecorder.requestMicrophoneAccess.mockRejectedValue(new Error('Permission denied'));
 
     render(<RecordButton voicePartId="soprano" onRecordingComplete={vi.fn()} />);
 
@@ -115,7 +115,7 @@ describe('REC-001: Request microphone permission on Add Track', () => {
 
     // Error is now displayed globally via useErrorStore (ERR-001)
     await waitFor(() => {
-      expect(mockRecorder.requestPermission).toHaveBeenCalled();
+      expect(mockRecorder.requestMicrophoneAccess).toHaveBeenCalled();
     });
 
     expect(mockRecorder.startRecording).not.toHaveBeenCalled();
@@ -130,7 +130,7 @@ describe('REC-002: Display countdown (3-2-1)', () => {
     vi.useFakeTimers();
 
     mockRecorder = {
-      requestPermission: vi.fn().mockResolvedValue({} as MediaStream),
+      requestMicrophoneAccess: vi.fn().mockResolvedValue({} as MediaStream),
       startRecording: vi.fn().mockResolvedValue(undefined),
       stopRecording: vi.fn().mockResolvedValue({
         blob: new Blob(),
@@ -170,11 +170,11 @@ describe('REC-002: Display countdown (3-2-1)', () => {
 
     await act(async () => {
       fireEvent.click(button);
-      // Flush promises to allow requestPermission to resolve
+      // Flush promises to allow requestMicrophoneAccess to resolve
       await Promise.resolve();
     });
 
-    expect(mockRecorder.requestPermission).toHaveBeenCalled();
+    expect(mockRecorder.requestMicrophoneAccess).toHaveBeenCalled();
 
     // Should show countdown value 3
     expect(screen.getByText('3')).toBeInTheDocument();
@@ -215,7 +215,7 @@ describe('REC-002: Display countdown (3-2-1)', () => {
       await Promise.resolve();
     });
 
-    expect(mockRecorder.requestPermission).toHaveBeenCalled();
+    expect(mockRecorder.requestMicrophoneAccess).toHaveBeenCalled();
 
     // Wait for countdown (3 seconds)
     await act(async () => {
@@ -235,7 +235,7 @@ describe('REC-003: Start MediaRecorder and metronome', () => {
     vi.useFakeTimers();
 
     mockRecorder = {
-      requestPermission: vi.fn().mockResolvedValue({} as MediaStream),
+      requestMicrophoneAccess: vi.fn().mockResolvedValue({} as MediaStream),
       startRecording: vi.fn().mockResolvedValue(undefined),
       stopRecording: vi.fn().mockResolvedValue({
         blob: new Blob(),
@@ -278,7 +278,7 @@ describe('REC-003: Start MediaRecorder and metronome', () => {
       await Promise.resolve();
     });
 
-    expect(mockRecorder.requestPermission).toHaveBeenCalled();
+    expect(mockRecorder.requestMicrophoneAccess).toHaveBeenCalled();
 
     // Wait for countdown
     await act(async () => {
@@ -299,7 +299,7 @@ describe('REC-003: Start MediaRecorder and metronome', () => {
       await Promise.resolve();
     });
 
-    expect(mockRecorder.requestPermission).toHaveBeenCalled();
+    expect(mockRecorder.requestMicrophoneAccess).toHaveBeenCalled();
 
     // Wait for countdown
     await act(async () => {
@@ -320,7 +320,7 @@ describe('REC-003: Start MediaRecorder and metronome', () => {
       await Promise.resolve();
     });
 
-    expect(mockRecorder.requestPermission).toHaveBeenCalled();
+    expect(mockRecorder.requestMicrophoneAccess).toHaveBeenCalled();
 
     // Wait for countdown
     await act(async () => {
@@ -343,7 +343,7 @@ describe('REC-004: Display VU meter during recording', () => {
     const mockStream = {} as MediaStream;
 
     mockRecorder = {
-      requestPermission: vi.fn().mockResolvedValue(mockStream),
+      requestMicrophoneAccess: vi.fn().mockResolvedValue(mockStream),
       startRecording: vi.fn().mockResolvedValue(undefined),
       stopRecording: vi.fn().mockResolvedValue({
         blob: new Blob(),
@@ -383,7 +383,7 @@ describe('REC-004: Display VU meter during recording', () => {
       await Promise.resolve();
     });
 
-    expect(mockRecorder.requestPermission).toHaveBeenCalled();
+    expect(mockRecorder.requestMicrophoneAccess).toHaveBeenCalled();
 
     // Wait for countdown
     await act(async () => {
@@ -396,7 +396,7 @@ describe('REC-004: Display VU meter during recording', () => {
 
   test('connects VU meter to microphone stream', async () => {
     const mockStream = {} as MediaStream;
-    mockRecorder.requestPermission.mockResolvedValue(mockStream);
+    mockRecorder.requestMicrophoneAccess.mockResolvedValue(mockStream);
 
     render(<RecordButton voicePartId="soprano" onRecordingComplete={vi.fn()} />);
 
@@ -407,7 +407,7 @@ describe('REC-004: Display VU meter during recording', () => {
       await Promise.resolve();
     });
 
-    expect(mockRecorder.requestPermission).toHaveBeenCalled();
+    expect(mockRecorder.requestMicrophoneAccess).toHaveBeenCalled();
 
     // Wait for countdown
     await act(async () => {
@@ -430,7 +430,7 @@ describe('REC-004: Display VU meter during recording', () => {
       await Promise.resolve();
     });
 
-    expect(mockRecorder.requestPermission).toHaveBeenCalled();
+    expect(mockRecorder.requestMicrophoneAccess).toHaveBeenCalled();
 
     // Wait for countdown and first VU meter update interval (50ms)
     await act(async () => {
@@ -451,7 +451,7 @@ describe('REC-007: Convert to WAV blob on stop', () => {
     vi.useFakeTimers();
 
     mockRecorder = {
-      requestPermission: vi.fn().mockResolvedValue({} as MediaStream),
+      requestMicrophoneAccess: vi.fn().mockResolvedValue({} as MediaStream),
       startRecording: vi.fn().mockResolvedValue(undefined),
       stopRecording: vi.fn().mockResolvedValue({
         blob: new Blob(['audio data'], { type: 'audio/wav' }),
@@ -492,7 +492,7 @@ describe('REC-007: Convert to WAV blob on stop', () => {
       await Promise.resolve();
     });
 
-    expect(mockRecorder.requestPermission).toHaveBeenCalled();
+    expect(mockRecorder.requestMicrophoneAccess).toHaveBeenCalled();
 
     // Wait for countdown
     await act(async () => {
@@ -530,7 +530,7 @@ describe('REC-007: Convert to WAV blob on stop', () => {
       await Promise.resolve();
     });
 
-    expect(mockRecorder.requestPermission).toHaveBeenCalled();
+    expect(mockRecorder.requestMicrophoneAccess).toHaveBeenCalled();
 
     // Wait for countdown
     await act(async () => {
@@ -565,7 +565,7 @@ describe('REC-007: Convert to WAV blob on stop', () => {
       await Promise.resolve();
     });
 
-    expect(mockRecorder.requestPermission).toHaveBeenCalled();
+    expect(mockRecorder.requestMicrophoneAccess).toHaveBeenCalled();
 
     // Wait for countdown
     await act(async () => {
@@ -591,7 +591,7 @@ describe('RecordButton: Component states', () => {
 
   beforeEach(() => {
     mockRecorder = {
-      requestPermission: vi.fn().mockResolvedValue({} as MediaStream),
+      requestMicrophoneAccess: vi.fn().mockResolvedValue({} as MediaStream),
       startRecording: vi.fn().mockResolvedValue(undefined),
       stopRecording: vi.fn().mockResolvedValue({
         blob: new Blob(),
@@ -649,7 +649,7 @@ describe('RecordButton: Component states', () => {
       await Promise.resolve();
     });
 
-    expect(mockRecorder.requestPermission).toHaveBeenCalled();
+    expect(mockRecorder.requestMicrophoneAccess).toHaveBeenCalled();
 
     // Wait for countdown
     await act(async () => {
@@ -679,7 +679,7 @@ describe('RecordButton: Component states', () => {
       await Promise.resolve();
     });
 
-    expect(mockRecorder.requestPermission).toHaveBeenCalled();
+    expect(mockRecorder.requestMicrophoneAccess).toHaveBeenCalled();
 
     // Wait for countdown
     await act(async () => {

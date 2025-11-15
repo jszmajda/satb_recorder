@@ -84,7 +84,7 @@ export function RecordButton({
 
     try {
       // Request microphone permission
-      const stream = await recorderRef.current!.requestPermission();
+      const stream = await recorderRef.current!.requestMicrophoneAccess();
       streamRef.current = stream;
 
       // Start countdown

@@ -208,6 +208,33 @@ function App() {
                   );
                 })}
               </div>
+
+              {/* Keyboard Shortcuts Hint */}
+              <div
+                style={{
+                  marginTop: '2rem',
+                  padding: '0.75rem',
+                  backgroundColor: '#1a1a1a',
+                  border: '1px solid #333',
+                  borderRadius: '4px',
+                  fontSize: '0.75rem',
+                  color: '#888',
+                }}
+              >
+                <strong style={{ color: '#aaa' }}>Keyboard Shortcuts:</strong>
+                <span style={{ marginLeft: '1rem' }}>
+                  <kbd style={{ padding: '0.2rem 0.4rem', backgroundColor: '#333', borderRadius: '3px', marginRight: '0.3rem' }}>
+                    Space
+                  </kbd>
+                  Play/Pause
+                </span>
+                <span style={{ marginLeft: '1rem' }}>
+                  <kbd style={{ padding: '0.2rem 0.4rem', backgroundColor: '#333', borderRadius: '3px', marginRight: '0.3rem' }}>
+                    Ctrl+Z
+                  </kbd>
+                  Undo Delete
+                </span>
+              </div>
             </>
           )}
         </div>

@@ -2,7 +2,7 @@ import { TopBar } from './components/TopBar';
 import { MetronomeControl } from './components/MetronomeControl';
 import { MicrophoneSelector } from './components/MicrophoneSelector';
 import { ToneGenerator } from './components/ToneGenerator';
-import { TransportControl } from './components/TransportControl';
+import { PlaybackControls } from './components/PlaybackControls';
 import { ErrorNotification } from './components/ErrorNotification';
 import { VoicePartSection } from './components/VoicePartSection';
 import { RecordButton } from './components/RecordButton';
@@ -12,7 +12,7 @@ import { useErrorStore } from './store/useErrorStore';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { Visualizer } from './audio/visualizer';
 import type { VoicePartType } from './store/types';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 
 function App() {
   const currentProject = useProjectStore((state) => state.currentProject);
@@ -27,6 +27,14 @@ function App() {
   // Error handling [EARS: ERR-001, ERR-002, ERR-003]
   const error = useErrorStore((state) => state.error);
   const clearError = useErrorStore((state) => state.clearError);
+
+  // [EARS: SEEK-001, SEEK-002, SEEK-003] Playback time state for seeking integration
+  const [currentTime, setCurrentTime] = useState(0);
+
+  // [EARS: SEEK-001, SEEK-002, SEEK-003] Handle seek from waveform
+  const handleSeek = (trackId: string, time: number) => {
+    setCurrentTime(time);
+  };
 
   // [EARS: VIS-001, REC-008] Waveform visualizer for generating sparkline data
   const visualizer = useMemo(() => {
@@ -70,7 +78,12 @@ function App() {
             <>
               <div>
                 <h2 className="text-xl font-bold mb-4">Transport Controls</h2>
-                <TransportControl />
+                {/* [EARS: SEEK-001, SEEK-002, SEEK-003] PlaybackControls with seeking support */}
+                <PlaybackControls
+                  currentTime={currentTime}
+                  onCurrentTimeChange={setCurrentTime}
+                  onSeek={setCurrentTime}
+                />
               </div>
 
               <div>
@@ -140,6 +153,7 @@ function App() {
                       />
 
                       {/* Existing tracks */}
+                      {/* [EARS: SEEK-001, SEEK-002, SEEK-003] Waveform seeking integration */}
                       {voicePart.tracks.map((track) => (
                         <TrackRow
                           key={track.id}
@@ -149,6 +163,8 @@ function App() {
                           onMuteToggle={(trackId) => setTrackMute(trackId, !track.muted)}
                           onVolumeChange={setTrackVolume}
                           onNameChange={setTrackName}
+                          currentTime={currentTime}
+                          onSeek={handleSeek}
                         />
                       ))}
                     </VoicePartSection>

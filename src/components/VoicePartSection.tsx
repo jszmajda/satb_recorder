@@ -131,31 +131,6 @@ export function VoicePartSection({
           </span>
         </div>
 
-        {/* Right side: Add Track button */}
-        {/* [EARS: REC-001] Add Track button */}
-        <button
-          onClick={handleAddTrack}
-          aria-label="Add Track"
-          style={{
-            padding: '0.3rem 0.6rem',
-            backgroundColor: getColorValue(color),
-            color: '#fff',
-            border: 'none',
-            borderRadius: '3px',
-            cursor: 'pointer',
-            fontWeight: 'bold',
-            fontSize: '0.9rem',
-            transition: 'all 0.15s ease',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.opacity = '0.8';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.opacity = '1';
-          }}
-        >
-          +
-        </button>
       </div>
 
       {/* Tracks Content */}

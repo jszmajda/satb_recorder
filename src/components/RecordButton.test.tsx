@@ -363,6 +363,7 @@ describe('REC-003: Start MediaRecorder and metronome', () => {
 describe('REC-004: Display VU meter during recording', () => {
   let mockRecorder: any;
   let mockVUMeter: any;
+  let mockMetronome: any;
 
   beforeEach(() => {
     vi.useFakeTimers();
@@ -388,11 +389,21 @@ describe('REC-004: Display VU meter during recording', () => {
       getVolume: vi.fn().mockReturnValue(0.5),
     };
 
+    mockMetronome = {
+      setBpm: vi.fn(),
+      getBpm: vi.fn().mockReturnValue(120),
+      start: vi.fn(),
+      stop: vi.fn(),
+    };
+
     vi.mocked(Recorder).mockImplementation(function() {
       return mockRecorder;
     } as any);
     vi.mocked(VUMeter).mockImplementation(function() {
       return mockVUMeter;
+    } as any);
+    vi.mocked(Metronome).mockImplementation(function() {
+      return mockMetronome;
     } as any);
   });
 
@@ -503,6 +514,8 @@ describe('REC-007: Convert to WAV blob on stop', () => {
 
     mockMetronome = {
       setBpm: vi.fn(),
+      getBpm: vi.fn().mockReturnValue(120),
+      start: vi.fn(),
       stop: vi.fn(),
       dispose: vi.fn(),
     };
@@ -626,6 +639,7 @@ describe('REC-007: Convert to WAV blob on stop', () => {
 
 describe('RecordButton: Component states', () => {
   let mockRecorder: any;
+  let mockMetronome: any;
 
   beforeEach(() => {
     mockRecorder = {
@@ -640,8 +654,18 @@ describe('RecordButton: Component states', () => {
       dispose: vi.fn(),
     };
 
+    mockMetronome = {
+      setBpm: vi.fn(),
+      getBpm: vi.fn().mockReturnValue(120),
+      start: vi.fn(),
+      stop: vi.fn(),
+    };
+
     vi.mocked(Recorder).mockImplementation(function() {
       return mockRecorder;
+    } as any);
+    vi.mocked(Metronome).mockImplementation(function() {
+      return mockMetronome;
     } as any);
   });
 
@@ -765,6 +789,8 @@ describe('REC-005, OVER-002: Overdub muting logic', () => {
     };
 
     mockMetronome = {
+      setBpm: vi.fn(),
+      getBpm: vi.fn().mockReturnValue(120),
       start: vi.fn(),
       stop: vi.fn(),
       dispose: vi.fn(),

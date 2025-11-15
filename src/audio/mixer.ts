@@ -9,14 +9,21 @@ interface TrackState {
   bufferSource: AudioBufferSourceNode | null;
 }
 
+interface PlaybackState {
+  startTime: number; // AudioContext time when playback started
+  offsetTime: number; // Offset into the audio buffer
+}
+
 /**
  * Mixer for multi-track audio playback
- * [EARS: TRACK-005, TRACK-006, TRACK-007, TRACK-008, PLAY-002, PLAY-003, PLAY-004, PLAY-005, PLAY-006, PLAY-007]
+ * [EARS: TRACK-005, TRACK-006, TRACK-007, TRACK-008, PLAY-002, PLAY-003, PLAY-004, PLAY-005, PLAY-006, PLAY-007, SEEK-001, SEEK-002, SEEK-003]
  */
 export class Mixer {
   private audioContext: AudioContext;
   private tracks: Map<string, TrackState> = new Map();
   private playing: boolean = false;
+  private playbackState: PlaybackState | null = null;
+  private masterGain: GainNode;
 
   /**
    * Create a new Mixer
@@ -26,6 +33,11 @@ export class Mixer {
    */
   constructor(audioContext: AudioContext) {
     this.audioContext = audioContext;
+
+    // Create master gain node for automatic gain reduction
+    this.masterGain = audioContext.createGain();
+    this.masterGain.connect(audioContext.destination);
+    this.masterGain.gain.value = 1.0;
   }
 
   /**
@@ -51,7 +63,7 @@ export class Mixer {
 
       // Create GainNode for this track
       const gainNode = this.audioContext.createGain();
-      gainNode.connect(this.audioContext.destination);
+      gainNode.connect(this.masterGain);
 
       // Create track state
       const trackState: TrackState = {
@@ -68,6 +80,9 @@ export class Mixer {
 
       // Store track
       this.tracks.set(trackId, trackState);
+
+      // Update master gain for new track count
+      this.updateMasterGain();
     } catch (error) {
       throw new Error('Failed to load track');
     }
@@ -97,6 +112,9 @@ export class Mixer {
 
     // Remove from tracks
     this.tracks.delete(trackId);
+
+    // Update master gain for new track count
+    this.updateMasterGain();
   }
 
   /**
@@ -158,6 +176,9 @@ export class Mixer {
 
     // Update gain node
     this.updateGain(track);
+
+    // Update master gain for new active track count
+    this.updateMasterGain();
   }
 
   /**
@@ -188,6 +209,7 @@ export class Mixer {
     track.soloed = soloed;
 
     // Update all track gains (solo affects all tracks)
+    // Gain will be adjusted in real-time without stopping playback
     this.updateAllGains();
   }
 
@@ -205,7 +227,7 @@ export class Mixer {
 
   /**
    * Start playback of all tracks
-   * [EARS: PLAY-002, PLAY-003, PLAY-006, PLAY-007] Play non-muted tracks (or soloed tracks if any)
+   * [EARS: PLAY-002, PLAY-003, PLAY-006, PLAY-007, SEEK-002] Play all tracks, use gain for mute/solo
    */
   play(): void {
     if (this.playing) {
@@ -213,47 +235,53 @@ export class Mixer {
       this.stop();
     }
 
-    // Check if any tracks are soloed
-    const hasSolo = Array.from(this.tracks.values()).some(track => track.soloed);
+    // Get the current offset (or 0 if no playback state)
+    const offset = this.playbackState?.offsetTime ?? 0;
 
-    // Create buffer sources for each track that should play
+    // Update master gain before starting playback
+    this.updateMasterGain();
+
+    // Create buffer sources for ALL tracks
+    // Gain nodes will control which ones are actually audible
     for (const [trackId, track] of this.tracks.entries()) {
-      let shouldPlay = false;
+      // Create buffer source
+      const bufferSource = this.audioContext.createBufferSource();
+      bufferSource.buffer = track.audioBuffer;
 
-      if (hasSolo) {
-        // If any track is soloed, only play soloed tracks
-        shouldPlay = track.soloed;
-      } else {
-        // Otherwise, play all non-muted tracks
-        shouldPlay = !track.muted;
-      }
+      // Connect to gain node
+      bufferSource.connect(track.gainNode);
 
-      if (shouldPlay) {
-        // Create buffer source
-        const bufferSource = this.audioContext.createBufferSource();
-        bufferSource.buffer = track.audioBuffer;
+      // Start playback from the current offset
+      // [EARS: SEEK-002] Resume playback from seek position
+      bufferSource.start(0, offset);
 
-        // Connect to gain node
-        bufferSource.connect(track.gainNode);
-
-        // Start playback
-        bufferSource.start(0);
-
-        // Store reference
-        track.bufferSource = bufferSource;
-      }
+      // Store reference
+      track.bufferSource = bufferSource;
     }
+
+    // Update playback state
+    this.playbackState = {
+      startTime: this.audioContext.currentTime,
+      offsetTime: offset,
+    };
 
     this.playing = true;
   }
 
   /**
    * Stop playback
-   * [EARS: PLAY-002, PLAY-005] Stop playback
+   * [EARS: PLAY-002, PLAY-005, SEEK-002] Stop playback and preserve position
    */
   stop(): void {
     if (!this.playing) {
       return;
+    }
+
+    // Calculate current playback position before stopping
+    // [EARS: SEEK-002] Preserve playback position when pausing
+    if (this.playbackState) {
+      const elapsed = this.audioContext.currentTime - this.playbackState.startTime;
+      this.playbackState.offsetTime += elapsed;
     }
 
     // Stop all buffer sources
@@ -280,6 +308,53 @@ export class Mixer {
    */
   isPlaying(): boolean {
     return this.playing;
+  }
+
+  /**
+   * Seek to a specific time position
+   * [EARS: SEEK-001, SEEK-002, SEEK-003] Jump to specific playback position
+   *
+   * @param time - Time in seconds to seek to
+   */
+  seek(time: number): void {
+    const wasPlaying = this.playing;
+
+    // Stop if currently playing
+    if (wasPlaying) {
+      this.stop();
+    }
+
+    // Update playback state with new offset
+    this.playbackState = {
+      startTime: this.audioContext.currentTime,
+      offsetTime: Math.max(0, time), // Clamp to >= 0
+    };
+
+    // Resume playback if we were playing
+    if (wasPlaying) {
+      this.play();
+    }
+  }
+
+  /**
+   * Get current playback time
+   * [EARS: SEEK-001] Query current playback position
+   *
+   * @returns Current playback time in seconds
+   */
+  getCurrentTime(): number {
+    if (!this.playbackState) {
+      return 0;
+    }
+
+    if (this.playing) {
+      // Calculate current position based on elapsed time
+      const elapsed = this.audioContext.currentTime - this.playbackState.startTime;
+      return this.playbackState.offsetTime + elapsed;
+    } else {
+      // Return the stored offset when paused/stopped
+      return this.playbackState.offsetTime;
+    }
   }
 
   /**
@@ -323,6 +398,42 @@ export class Mixer {
     for (const track of this.tracks.values()) {
       this.updateGain(track);
     }
+    // Update master gain to prevent clipping
+    this.updateMasterGain();
+  }
+
+  /**
+   * Update master gain to prevent clipping when multiple tracks play
+   * Uses 1/sqrt(N) scaling where N is the number of active tracks
+   */
+  private updateMasterGain(): void {
+    // Count tracks that will be audible (not muted/silenced by solo)
+    const hasSolo = Array.from(this.tracks.values()).some(t => t.soloed);
+
+    let activeTrackCount = 0;
+    for (const track of this.tracks.values()) {
+      if (hasSolo) {
+        // Only soloed tracks are active
+        if (track.soloed) {
+          activeTrackCount++;
+        }
+      } else {
+        // Non-muted tracks are active
+        if (!track.muted) {
+          activeTrackCount++;
+        }
+      }
+    }
+
+    // Apply gain reduction to prevent clipping
+    // Use 1/sqrt(N) scaling - better than 1/N as it's less aggressive
+    // but still prevents clipping in most cases
+    let masterGain = 1.0;
+    if (activeTrackCount > 1) {
+      masterGain = 1.0 / Math.sqrt(activeTrackCount);
+    }
+
+    this.masterGain.gain.value = masterGain;
   }
 
   /**

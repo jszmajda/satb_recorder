@@ -177,58 +177,6 @@ describe('VOICE-004: Color coding', () => {
   });
 });
 
-describe('REC-001: Add Track button', () => {
-  // ✅ Happy path
-  test('renders Add Track button', () => {
-    render(<VoicePartSection voicePartId="soprano" name="Soprano" color="red" trackCount={0} />);
-
-    const addButton = screen.getByRole('button', { name: /add track/i });
-    expect(addButton).toBeInTheDocument();
-  });
-
-  test('Add Track button shows + icon', () => {
-    render(<VoicePartSection voicePartId="soprano" name="Soprano" color="red" trackCount={0} />);
-
-    const addButton = screen.getByRole('button', { name: /add track/i });
-    expect(addButton).toHaveTextContent('+');
-  });
-
-  test('clicking Add Track button calls onAddTrack callback', () => {
-    const handleAddTrack = vi.fn();
-    render(
-      <VoicePartSection
-        voicePartId="soprano"
-        name="Soprano"
-        color="red"
-        trackCount={0}
-        onAddTrack={handleAddTrack}
-      />
-    );
-
-    const addButton = screen.getByRole('button', { name: /add track/i });
-    fireEvent.click(addButton);
-
-    expect(handleAddTrack).toHaveBeenCalledTimes(1);
-  });
-
-  test('Add Track button passes voice part ID to callback', () => {
-    const handleAddTrack = vi.fn();
-    render(
-      <VoicePartSection
-        voicePartId="soprano"
-        name="Soprano"
-        color="red"
-        trackCount={0}
-        onAddTrack={handleAddTrack}
-      />
-    );
-
-    const addButton = screen.getByRole('button', { name: /add track/i });
-    fireEvent.click(addButton);
-
-    expect(handleAddTrack).toHaveBeenCalledWith('soprano');
-  });
-});
 
 describe('VoicePartSection: Layout', () => {
   test('renders header with name, track count, and controls', () => {
@@ -237,7 +185,6 @@ describe('VoicePartSection: Layout', () => {
     expect(screen.getByText(/soprano/i)).toBeInTheDocument();
     expect(screen.getByText(/3 tracks/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /collapse/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /add track/i })).toBeInTheDocument();
   });
 
   test('renders children when expanded', () => {

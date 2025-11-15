@@ -1,8 +1,9 @@
 import { TopBar } from './components/TopBar';
 import { MetronomeControl } from './components/MetronomeControl';
+import { MetronomeFlasher } from './components/MetronomeFlasher';
 import { MicrophoneSelector } from './components/MicrophoneSelector';
 import { ToneGenerator } from './components/ToneGenerator';
-import { PlaybackControls } from './components/PlaybackControls';
+import { PlaybackControls, type PlaybackControlsHandle } from './components/PlaybackControls';
 import { ErrorNotification } from './components/ErrorNotification';
 import { VoicePartSection } from './components/VoicePartSection';
 import { RecordButton } from './components/RecordButton';
@@ -12,7 +13,7 @@ import { useErrorStore } from './store/useErrorStore';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { Visualizer } from './audio/visualizer';
 import type { VoicePartType } from './store/types';
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 
 function App() {
   const currentProject = useProjectStore((state) => state.currentProject);
@@ -31,6 +32,9 @@ function App() {
 
   // [EARS: SEEK-001, SEEK-002, SEEK-003] Playback time state for seeking integration
   const [currentTime, setCurrentTime] = useState(0);
+
+  // Ref for PlaybackControls to enable keyboard shortcuts
+  const playbackControlsRef = useRef<PlaybackControlsHandle>(null);
 
   // Calculate maximum duration across all tracks for waveform alignment
   const maxDuration = useMemo(() => {
@@ -98,10 +102,14 @@ function App() {
   }, []); // Only run on mount
 
   /**
-   * Keyboard shortcut: Ctrl+Z/Cmd+Z for undo delete
-   * [EARS: TRACK-003] Restore last deleted track
+   * Keyboard shortcuts:
+   * - Ctrl+Z/Cmd+Z for undo delete [EARS: TRACK-003]
+   * - Space for play/pause toggle
    */
   useKeyboardShortcuts({
+    onPlayPause: () => {
+      playbackControlsRef.current?.togglePlayPause();
+    },
     onUndo: () => {
       try {
         undoDeleteTrack();
@@ -111,6 +119,44 @@ function App() {
       }
     },
   });
+
+  /**
+   * Toggle track solo state
+   * Looks up current state from project to avoid stale closures
+   */
+  const handleToggleSolo = (trackId: string) => {
+    if (!currentProject) return;
+
+    // Find the current track to get its current solo state
+    let currentTrack = null;
+    for (const voicePart of currentProject.voiceParts) {
+      currentTrack = voicePart.tracks.find(t => t.id === trackId);
+      if (currentTrack) break;
+    }
+
+    if (currentTrack) {
+      setTrackSolo(trackId, !currentTrack.soloed);
+    }
+  };
+
+  /**
+   * Toggle track mute state
+   * Looks up current state from project to avoid stale closures
+   */
+  const handleToggleMute = (trackId: string) => {
+    if (!currentProject) return;
+
+    // Find the current track to get its current mute state
+    let currentTrack = null;
+    for (const voicePart of currentProject.voiceParts) {
+      currentTrack = voicePart.tracks.find(t => t.id === trackId);
+      if (currentTrack) break;
+    }
+
+    if (currentTrack) {
+      setTrackMute(trackId, !currentTrack.muted);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
@@ -131,22 +177,34 @@ function App() {
             </>
           ) : (
             <>
-              {/* [EARS: SEEK-001, SEEK-002, SEEK-003, PLAY-001 through PLAY-008] PlaybackControls with seeking and playback */}
-              <PlaybackControls
-                totalDuration={maxDuration}
-                tracks={allTracks}
-                currentTime={currentTime}
-                onCurrentTimeChange={setCurrentTime}
-                onSeek={setCurrentTime}
-              />
+              {/* Two-column layout: Metronome flasher on left, controls on right */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                {/* Left column: Large metronome flasher */}
+                <div style={{ display: 'flex', alignItems: 'stretch' }}>
+                  <MetronomeFlasher />
+                </div>
 
-              {/* Metronome and Tone Generator on same row */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
-                <MetronomeControl />
-                <ToneGenerator />
+                {/* Right column: Controls stacked */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  {/* [EARS: SEEK-001, SEEK-002, SEEK-003, PLAY-001 through PLAY-008] PlaybackControls with seeking and playback */}
+                  <PlaybackControls
+                    ref={playbackControlsRef}
+                    totalDuration={maxDuration}
+                    tracks={allTracks}
+                    currentTime={currentTime}
+                    onCurrentTimeChange={setCurrentTime}
+                    onSeek={setCurrentTime}
+                  />
+
+                  {/* Metronome and Tone Generator on same row */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
+                    <MetronomeControl />
+                    <ToneGenerator />
+                  </div>
+
+                  <MicrophoneSelector />
+                </div>
               </div>
-
-              <MicrophoneSelector />
 
               <div className="space-y-2">
                 {currentProject.voiceParts.map((voicePart) => {
@@ -172,13 +230,7 @@ function App() {
                         voicePartId={voicePart.type}
                         bpm={currentProject.bpm}
                         overdubEnabled={currentProject.overdubEnabled}
-                        tracks={voicePart.tracks.map(track => ({
-                          id: track.id,
-                          audioBlob: track.audioBlob,
-                          volume: track.volume,
-                          muted: track.muted,
-                          soloed: track.soloed,
-                        }))}
+                        tracks={allTracks}
                         onRecordingComplete={async (result) => {
                           // [EARS: VIS-001, REC-008] Generate waveform data from recording
                           let waveformData: number[] = [];
@@ -205,8 +257,8 @@ function App() {
                           key={track.id}
                           track={track}
                           onDelete={deleteTrack}
-                          onSoloToggle={(trackId) => setTrackSolo(trackId, !track.soloed)}
-                          onMuteToggle={(trackId) => setTrackMute(trackId, !track.muted)}
+                          onSoloToggle={handleToggleSolo}
+                          onMuteToggle={handleToggleMute}
                           onVolumeChange={setTrackVolume}
                           onNameChange={setTrackName}
                           currentTime={currentTime}

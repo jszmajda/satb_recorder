@@ -28,7 +28,7 @@ export interface RecordButtonProps {
 
 type RecordingState = 'idle' | 'requesting-permission' | 'countdown' | 'recording' | 'error';
 
-const COUNTDOWN_DURATION = 3; // seconds
+const COUNTDOWN_BEATS = 5; // Number of beats to count down
 
 /**
  * RecordButton component handles the complete recording workflow
@@ -42,7 +42,7 @@ export function RecordButton({
   onRecordingComplete,
 }: RecordButtonProps) {
   const [recordingState, setRecordingState] = useState<RecordingState>('idle');
-  const [countdownValue, setCountdownValue] = useState(COUNTDOWN_DURATION);
+  const [countdownValue, setCountdownValue] = useState(COUNTDOWN_BEATS);
   const [vuLevel, setVuLevel] = useState(0);
 
   // Global error handling [EARS: ERR-001, ERR-003]
@@ -116,7 +116,7 @@ export function RecordButton({
 
       // Start countdown
       setRecordingState('countdown');
-      setCountdownValue(COUNTDOWN_DURATION);
+      setCountdownValue(COUNTDOWN_BEATS);
 
       // [EARS: REC-002] Display countdown
       startCountdown();
@@ -129,10 +129,10 @@ export function RecordButton({
 
   /**
    * Start countdown before recording
-   * [EARS: REC-002] Display countdown (3-2-1)
+   * [EARS: REC-002] Display countdown (5-4-3-2-1) synced to metronome beats
    */
   const startCountdown = () => {
-    let count = COUNTDOWN_DURATION;
+    let count = COUNTDOWN_BEATS;
     setCountdownValue(count);
 
     // Start metronome during countdown so user can feel the tempo
@@ -140,6 +140,10 @@ export function RecordButton({
     if (metronome) {
       metronome.start();
     }
+
+    // Get current BPM from metronome instance for accurate countdown timing
+    const currentBpm = metronome ? metronome.getBpm() : bpm;
+    const beatIntervalMs = 60000 / currentBpm;
 
     countdownIntervalRef.current = window.setInterval(() => {
       count--;
@@ -151,7 +155,7 @@ export function RecordButton({
         }
         startRecording();
       }
-    }, 1000);
+    }, beatIntervalMs);
   };
 
   /**
@@ -165,7 +169,11 @@ export function RecordButton({
 
     setRecordingState('recording');
 
-    // [EARS: REC-004] Connect VU meter to stream
+    // [EARS: REC-003] Start MediaRecorder IMMEDIATELY to avoid delay
+    // Note: Start recording first, then set up other features in parallel
+    await recorderRef.current.startRecording(streamRef.current);
+
+    // [EARS: REC-004] Connect VU meter to stream (in parallel with recording)
     if (vuMeterRef.current && audioContextRef.current) {
       // Resume AudioContext before connecting analyser (required in modern browsers)
       if (audioContextRef.current.state === 'suspended') {
@@ -183,27 +191,27 @@ export function RecordButton({
       }, 50);
     }
 
-    // [EARS: REC-005, OVER-002] If overdub enabled, load and play existing tracks
+    // [EARS: REC-005, OVER-002] Load and play overdub tracks in background (don't block recording)
     if (overdubEnabled && mixerRef.current && tracks.length > 0) {
-      try {
-        // Load all tracks into mixer
-        for (const track of tracks) {
-          await mixerRef.current.loadTrack(track.id, track.audioBlob);
-          // Set track volume, mute, and solo states
-          mixerRef.current.setVolume(track.id, track.volume);
-          mixerRef.current.setMuted(track.id, track.muted);
-          mixerRef.current.setSoloed(track.id, track.soloed);
+      // Load tracks asynchronously without blocking
+      (async () => {
+        try {
+          // Load all tracks into mixer
+          for (const track of tracks) {
+            await mixerRef.current!.loadTrack(track.id, track.audioBlob);
+            // Set track volume, mute, and solo states
+            mixerRef.current!.setVolume(track.id, track.volume);
+            mixerRef.current!.setMuted(track.id, track.muted);
+            mixerRef.current!.setSoloed(track.id, track.soloed);
+          }
+          // Start playback
+          mixerRef.current!.play();
+        } catch (error) {
+          console.error('Failed to load/play overdub tracks:', error);
+          // Continue recording even if overdub playback fails
         }
-        // Start playback
-        mixerRef.current.play();
-      } catch (error) {
-        console.error('Failed to load/play overdub tracks:', error);
-        // Continue recording even if overdub playback fails
-      }
+      })();
     }
-
-    // [EARS: REC-003] Start MediaRecorder
-    await recorderRef.current.startRecording(streamRef.current);
 
     // Note: Metronome already started during countdown (see startCountdown())
   };
@@ -262,89 +270,95 @@ export function RecordButton({
       className="record-button-container"
       style={{
         display: 'flex',
-        flexDirection: 'column',
         alignItems: 'center',
-        gap: '1rem',
+        gap: '0.4rem',
+        padding: '0.4rem',
+        backgroundColor: '#2c2c2c',
+        border: '1px solid #444',
+        borderRadius: '3px',
+        marginBottom: '0.3rem',
       }}
     >
-      {/* Countdown Display */}
-      {/* [EARS: REC-002] Countdown display */}
-      {recordingState === 'countdown' && (
-        <div
-          style={{
-            fontSize: '3rem',
-            fontWeight: 'bold',
-            color: '#ff9800',
-          }}
-        >
-          {countdownValue}
-        </div>
-      )}
-
-      {/* VU Meter During Recording */}
-      {/* [EARS: REC-004] VU meter display during recording */}
-      {recordingState === 'recording' && (
-        <VUMeter level={vuLevel} width={300} height={30} />
-      )}
-
       {/* Record / Stop Button */}
       {recordingState === 'idle' || recordingState === 'error' ? (
         <button
           onClick={handleRecordClick}
           aria-label="Record track"
           style={{
-            padding: '1rem 2rem',
+            padding: '0.3rem 0.5rem',
             backgroundColor: '#f44336',
             color: '#fff',
             border: 'none',
-            borderRadius: '50%',
-            width: '80px',
-            height: '80px',
+            borderRadius: '3px',
             cursor: 'pointer',
-            fontSize: '1rem',
+            fontSize: '0.7rem',
             fontWeight: 'bold',
+            minWidth: '45px',
           }}
         >
-          ●
+          Rec
         </button>
       ) : recordingState === 'requesting-permission' || recordingState === 'countdown' ? (
         <button
           disabled
           aria-label="Record track"
           style={{
-            padding: '1rem 2rem',
+            padding: '0.3rem 0.5rem',
             backgroundColor: '#999',
             color: '#fff',
             border: 'none',
-            borderRadius: '50%',
-            width: '80px',
-            height: '80px',
+            borderRadius: '3px',
             cursor: 'not-allowed',
-            fontSize: '1rem',
+            fontSize: '0.7rem',
             fontWeight: 'bold',
+            minWidth: '45px',
           }}
         >
-          ●
+          {recordingState === 'countdown' ? countdownValue : 'Rec'}
         </button>
       ) : (
         <button
           onClick={handleStopClick}
           aria-label="Stop recording"
           style={{
-            padding: '1rem 2rem',
-            backgroundColor: '#444',
+            padding: '0.3rem 0.5rem',
+            backgroundColor: '#d32f2f',
             color: '#fff',
             border: 'none',
-            borderRadius: '4px',
-            width: '80px',
-            height: '80px',
+            borderRadius: '3px',
             cursor: 'pointer',
-            fontSize: '1rem',
+            fontSize: '0.7rem',
             fontWeight: 'bold',
+            minWidth: '45px',
           }}
         >
-          ■
+          Stop
         </button>
+      )}
+
+      {/* Label / Status Text */}
+      <span
+        style={{
+          fontSize: '0.8rem',
+          color: '#aaa',
+          minWidth: '100px',
+        }}
+      >
+        {recordingState === 'countdown'
+          ? 'Get ready...'
+          : recordingState === 'recording'
+          ? 'Recording...'
+          : recordingState === 'requesting-permission'
+          ? 'Requesting mic...'
+          : 'New track'}
+      </span>
+
+      {/* VU Meter During Recording */}
+      {/* [EARS: REC-004] VU meter display during recording */}
+      {recordingState === 'recording' && (
+        <div style={{ flex: 1, minWidth: '150px' }}>
+          <VUMeter level={vuLevel} width={250} height={30} />
+        </div>
       )}
     </div>
   );

@@ -202,7 +202,13 @@ describe('MIC-004, REC-001, ERR-001: Microphone permission handling', () => {
 
     await recorder.requestMicrophoneAccess();
 
-    expect(getUserMediaSpy).toHaveBeenCalledWith({ audio: true });
+    expect(getUserMediaSpy).toHaveBeenCalledWith({
+      audio: {
+        echoCancellation: false,
+        autoGainControl: false,
+        noiseSuppression: false,
+      }
+    });
   });
 
   test('requests microphone with specific device when selected', async () => {
@@ -214,7 +220,12 @@ describe('MIC-004, REC-001, ERR-001: Microphone permission handling', () => {
     await recorder.requestMicrophoneAccess();
 
     expect(getUserMediaSpy).toHaveBeenCalledWith({
-      audio: { deviceId: { exact: deviceId } }
+      audio: {
+        echoCancellation: false,
+        autoGainControl: false,
+        noiseSuppression: false,
+        deviceId: { exact: deviceId }
+      }
     });
   });
 

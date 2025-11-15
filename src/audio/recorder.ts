@@ -93,10 +93,19 @@ export class Recorder {
 
     try {
       // Build constraints based on selected device
+      // Disable echo cancellation, auto gain, and noise suppression for clean recording
+      const audioConstraints: MediaTrackConstraints = {
+        echoCancellation: false,
+        autoGainControl: false,
+        noiseSuppression: false,
+      };
+
+      if (this.selectedDeviceId) {
+        audioConstraints.deviceId = { exact: this.selectedDeviceId };
+      }
+
       const constraints: MediaStreamConstraints = {
-        audio: this.selectedDeviceId
-          ? { deviceId: { exact: this.selectedDeviceId } }
-          : true
+        audio: audioConstraints
       };
 
       const stream = await navigator.mediaDevices.getUserMedia(constraints);

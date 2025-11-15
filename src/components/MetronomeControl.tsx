@@ -1,65 +1,33 @@
-// [EARS: MET-002, MET-003, MET-005, OVER-001] Metronome control with BPM and visual feedback
+// [EARS: MET-002, MET-003, OVER-001] Metronome control with BPM
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useProjectStore } from '../store/useProjectStore';
 import { useMetronome } from '../contexts/MetronomeContext';
 
 const MIN_BPM = 40;
 const MAX_BPM = 240;
-const FLASH_DURATION = 100; // milliseconds
 
 export function MetronomeControl() {
-  const [bpm, setBpm] = useState(120);
-
   // [EARS: OVER-001] Use global project store for overdub state
+  const currentProject = useProjectStore((state) => state.currentProject);
   const overdubEnabled = useProjectStore((state) => state.currentProject?.overdubEnabled ?? false);
   const setOverdubEnabled = useProjectStore((state) => state.setOverdubEnabled);
+  const updateBpm = useProjectStore((state) => state.updateBpm);
+
+  // Local state for BPM (synced with project)
+  const [bpm, setBpm] = useState(120);
 
   // Get shared metronome instance from context
   const { getMetronome } = useMetronome();
-  const flashTimeoutRef = useRef<number | null>(null);
-  const flashElementRef = useRef<HTMLDivElement | null>(null);
 
   /**
-   * Set up visual callback on shared metronome
-   * [EARS: MET-005] Flash indicator on each beat
+   * Initialize BPM from project when project loads
    */
   useEffect(() => {
-    const metronome = getMetronome();
-    if (!metronome) return;
-
-    /**
-     * Visual callback for metronome beats
-     * [EARS: MET-005] Flash indicator on each beat
-     * Uses data attribute to trigger CSS change (survives React re-renders)
-     */
-    const handleVisualCallback = () => {
-      const element = flashElementRef.current;
-      if (!element) return;
-
-      // Use dataset attribute to trigger CSS change (survives React re-renders)
-      element.dataset.flashing = 'true';
-
-      // Clear flash after duration
-      if (flashTimeoutRef.current) {
-        clearTimeout(flashTimeoutRef.current);
-      }
-      flashTimeoutRef.current = window.setTimeout(() => {
-        if (element) {
-          element.dataset.flashing = 'false';
-        }
-      }, FLASH_DURATION);
-    };
-
-    metronome.setVisualCallback(handleVisualCallback);
-
-    // Cleanup on unmount
-    return () => {
-      if (flashTimeoutRef.current) {
-        clearTimeout(flashTimeoutRef.current);
-      }
-    };
-  }, [getMetronome]);
+    if (currentProject) {
+      setBpm(currentProject.bpm);
+    }
+  }, [currentProject?.id]); // Only update when project changes
 
   /**
    * Update metronome BPM when bpm state changes
@@ -85,16 +53,16 @@ export function MetronomeControl() {
       return;
     }
 
-    // Clamp to valid range
-    const clampedValue = Math.max(MIN_BPM, Math.min(MAX_BPM, numValue));
-    setBpm(clampedValue);
+    // Set value directly without clamping to allow typing
+    setBpm(numValue);
   };
 
   /**
    * Handle BPM input blur
    * [EARS: MET-003] Restore valid BPM if input is invalid
+   * [EARS: PROJ-005] Auto-save BPM to project
    */
-  const handleBPMBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+  const handleBPMBlur = async (e: React.FocusEvent<HTMLInputElement>) => {
     const value = e.target.value;
     const numValue = parseInt(value, 10);
 
@@ -109,25 +77,40 @@ export function MetronomeControl() {
     if (clampedValue !== numValue) {
       setBpm(clampedValue);
     }
+
+    // Save to project store
+    if (currentProject) {
+      await updateBpm(clampedValue);
+    }
   };
 
   /**
    * Increment BPM
    * [EARS: MET-002] Increase BPM by 1
+   * [EARS: PROJ-005] Auto-save BPM to project
    */
-  const handleIncrement = () => {
+  const handleIncrement = async () => {
     if (bpm < MAX_BPM) {
-      setBpm(bpm + 1);
+      const newBpm = bpm + 1;
+      setBpm(newBpm);
+      if (currentProject) {
+        await updateBpm(newBpm);
+      }
     }
   };
 
   /**
    * Decrement BPM
    * [EARS: MET-002] Decrease BPM by 1
+   * [EARS: PROJ-005] Auto-save BPM to project
    */
-  const handleDecrement = () => {
+  const handleDecrement = async () => {
     if (bpm > MIN_BPM) {
-      setBpm(bpm - 1);
+      const newBpm = bpm - 1;
+      setBpm(newBpm);
+      if (currentProject) {
+        await updateBpm(newBpm);
+      }
     }
   };
 
@@ -140,17 +123,6 @@ export function MetronomeControl() {
   };
 
   return (
-    <>
-      {/* CSS for metronome flash - using data attribute to survive React re-renders */}
-      <style>{`
-        [data-testid="metronome-flash"] {
-          background-color: #444;
-        }
-        [data-testid="metronome-flash"][data-flashing="true"] {
-          background-color: #4caf50;
-        }
-      `}</style>
-
       <div
         className="metronome-control"
         style={{
@@ -163,20 +135,6 @@ export function MetronomeControl() {
           borderRadius: '4px',
         }}
       >
-        {/* Visual Flash Indicator */}
-        {/* [EARS: MET-005] Visual feedback for metronome beats */}
-        <div
-          ref={flashElementRef}
-          data-testid="metronome-flash"
-          data-flashing="false"
-          style={{
-            width: '28px',
-            height: '28px',
-            borderRadius: '3px',
-            transition: 'background-color 0.05s ease',
-            border: '1px solid #666',
-          }}
-        />
 
       {/* BPM Controls */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
@@ -207,8 +165,6 @@ export function MetronomeControl() {
           value={bpm}
           onChange={handleBPMChange}
           onBlur={handleBPMBlur}
-          min={MIN_BPM}
-          max={MAX_BPM}
           aria-label="BPM"
           style={{
             width: '55px',
@@ -273,6 +229,5 @@ export function MetronomeControl() {
         </label>
       </div>
     </div>
-    </>
   );
 }

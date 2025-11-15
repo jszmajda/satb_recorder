@@ -1,7 +1,7 @@
 // [EARS: PLAY-001, PLAY-002, PLAY-003, PLAY-004, PLAY-005, PLAY-006, PLAY-007, PLAY-008]
 // PlaybackControls component integrates Mixer with transport UI
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { Mixer } from '../audio/mixer';
 import { useMetronome } from '../contexts/MetronomeContext';
 
@@ -32,6 +32,13 @@ export interface PlaybackControlsProps {
   onSeek?: (time: number) => void;
 }
 
+/**
+ * Methods exposed via ref for external control
+ */
+export interface PlaybackControlsHandle {
+  togglePlayPause: () => void;
+}
+
 type PlayState = 'stopped' | 'playing' | 'paused';
 
 /**
@@ -47,13 +54,14 @@ function formatTime(seconds: number): string {
  * PlaybackControls component integrates Mixer with transport controls
  * [EARS: PLAY-001 through PLAY-008]
  */
-export function PlaybackControls({
-  totalDuration = 0,
-  tracks = [],
-  currentTime: externalCurrentTime,
-  onCurrentTimeChange,
-  onSeek,
-}: PlaybackControlsProps) {
+export const PlaybackControls = forwardRef<PlaybackControlsHandle, PlaybackControlsProps>(
+  function PlaybackControls({
+    totalDuration = 0,
+    tracks = [],
+    currentTime: externalCurrentTime,
+    onCurrentTimeChange,
+    onSeek,
+  }, ref) {
   const [playState, setPlayState] = useState<PlayState>('stopped');
   const [internalCurrentTime, setInternalCurrentTime] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
@@ -67,6 +75,8 @@ export function PlaybackControls({
   const mixerRef = useRef<Mixer | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const intervalRef = useRef<number | null>(null);
+  const loadedTrackIdsRef = useRef<Set<string>>(new Set());
+  const lastInternalTimeRef = useRef<number>(0);
 
   /**
    * Initialize mixer on mount
@@ -85,6 +95,7 @@ export function PlaybackControls({
       if (audioContextRef.current) {
         audioContextRef.current.close();
       }
+      loadedTrackIdsRef.current.clear();
     };
   }, []);
 
@@ -94,17 +105,33 @@ export function PlaybackControls({
    */
   useEffect(() => {
     const loadTracks = async () => {
-      if (!mixerRef.current || tracks.length === 0) {
+      if (!mixerRef.current) {
         setIsLoading(false);
         return;
       }
 
       setIsLoading(true);
 
-      // Load all tracks
+      // Get current track IDs from props
+      const currentTrackIds = new Set(tracks.map(t => t.id));
+
+      // Unload tracks that are no longer in the list
+      const tracksToUnload = Array.from(loadedTrackIdsRef.current).filter(id => !currentTrackIds.has(id));
+      for (const trackId of tracksToUnload) {
+        mixerRef.current.unloadTrack(trackId);
+        loadedTrackIdsRef.current.delete(trackId);
+      }
+
+      // Load new tracks and update state for all tracks
       for (const track of tracks) {
         try {
-          await mixerRef.current.loadTrack(track.id, track.audioBlob);
+          // Only load if not already loaded (to avoid re-decoding audio)
+          if (!loadedTrackIdsRef.current.has(track.id)) {
+            await mixerRef.current.loadTrack(track.id, track.audioBlob);
+            loadedTrackIdsRef.current.add(track.id);
+          }
+
+          // Always update volume, mute, and solo state (cheap operations)
           mixerRef.current.setVolume(track.id, track.volume);
           mixerRef.current.setMuted(track.id, track.muted);
           mixerRef.current.setSoloed(track.id, track.soloed);
@@ -118,6 +145,24 @@ export function PlaybackControls({
 
     loadTracks();
   }, [tracks]);
+
+  /**
+   * Handle external seek events
+   * [EARS: SEEK-001, SEEK-002, SEEK-003] Seek mixer when currentTime changes externally
+   */
+  useEffect(() => {
+    if (!mixerRef.current) return;
+
+    // Check if this is an external time change (not from our interval)
+    const tolerance = 0.15; // Allow 150ms tolerance for interval updates
+    const timeDiff = Math.abs(currentTime - lastInternalTimeRef.current);
+
+    if (timeDiff > tolerance) {
+      // This is an external seek - update the mixer
+      mixerRef.current.seek(currentTime);
+      lastInternalTimeRef.current = currentTime;
+    }
+  }, [currentTime]);
 
   /**
    * Sync play state with mixer
@@ -184,7 +229,7 @@ export function PlaybackControls({
 
   /**
    * Handle Stop button click
-   * [EARS: PLAY-003] Stop and reset playhead to 0:00
+   * [EARS: PLAY-003, SEEK-002] Stop and reset playhead to 0:00
    */
   const handleStop = () => {
     if (!mixerRef.current) return;
@@ -198,7 +243,7 @@ export function PlaybackControls({
       metronome.stop();
     }
 
-    // Reset time to 0
+    // Reset time to 0 (this will trigger the seek useEffect)
     if (externalCurrentTime !== undefined && onCurrentTimeChange) {
       onCurrentTimeChange(0);
     } else {
@@ -223,6 +268,13 @@ export function PlaybackControls({
   };
 
   /**
+   * Expose methods via ref for external control (e.g., keyboard shortcuts)
+   */
+  useImperativeHandle(ref, () => ({
+    togglePlayPause: handlePlayPauseToggle,
+  }));
+
+  /**
    * Update playhead time while playing
    * [EARS: PLAY-004] Update playhead visual in real-time
    * [EARS: PLAY-005] Display elapsed time
@@ -232,6 +284,9 @@ export function PlaybackControls({
       // Update time every 100ms for smooth display
       intervalRef.current = window.setInterval(() => {
         const newTime = Math.min(currentTime + 0.1, totalDuration);
+
+        // Track that this is an internal time update
+        lastInternalTimeRef.current = newTime;
 
         if (externalCurrentTime !== undefined && onCurrentTimeChange) {
           onCurrentTimeChange(newTime);
@@ -341,4 +396,4 @@ export function PlaybackControls({
       </div>
     </div>
   );
-}
+});

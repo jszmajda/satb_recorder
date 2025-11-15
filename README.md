@@ -1,4 +1,4 @@
-# EARS - Multi-Track Vocal Harmony Recorder
+# SATB - Multi-Track Vocal Harmony Recorder
 
 A browser-based multi-track audio recorder designed for recording vocal harmonies (Soprano, Alto, Tenor, Bass). Built with React, TypeScript, and the Web Audio API.
 

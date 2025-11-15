@@ -33,8 +33,9 @@ describe('REC-001: Request microphone permission on Add Track', () => {
       requestMicrophoneAccess: vi.fn().mockResolvedValue({} as MediaStream),
       startRecording: vi.fn().mockResolvedValue(undefined),
       stopRecording: vi.fn().mockResolvedValue({
-        blob: new Blob(),
+        audioBlob: new Blob(),
         duration: 5,
+        waveformData: [],
       }),
       getRecordingState: vi.fn().mockReturnValue('inactive'),
       dispose: vi.fn(),
@@ -133,8 +134,9 @@ describe('REC-002: Display countdown (3-2-1)', () => {
       requestMicrophoneAccess: vi.fn().mockResolvedValue({} as MediaStream),
       startRecording: vi.fn().mockResolvedValue(undefined),
       stopRecording: vi.fn().mockResolvedValue({
-        blob: new Blob(),
+        audioBlob: new Blob(),
         duration: 5,
+        waveformData: [],
       }),
       getRecordingState: vi.fn().mockReturnValue('inactive'),
       dispose: vi.fn(),
@@ -238,8 +240,9 @@ describe('REC-003: Start MediaRecorder and metronome', () => {
       requestMicrophoneAccess: vi.fn().mockResolvedValue({} as MediaStream),
       startRecording: vi.fn().mockResolvedValue(undefined),
       stopRecording: vi.fn().mockResolvedValue({
-        blob: new Blob(),
+        audioBlob: new Blob(),
         duration: 5,
+        waveformData: [],
       }),
       getRecordingState: vi.fn().mockReturnValue('inactive'),
       dispose: vi.fn(),
@@ -346,8 +349,9 @@ describe('REC-004: Display VU meter during recording', () => {
       requestMicrophoneAccess: vi.fn().mockResolvedValue(mockStream),
       startRecording: vi.fn().mockResolvedValue(undefined),
       stopRecording: vi.fn().mockResolvedValue({
-        blob: new Blob(),
+        audioBlob: new Blob(),
         duration: 5,
+        waveformData: [],
       }),
       getRecordingState: vi.fn().mockReturnValue('inactive'),
       dispose: vi.fn(),
@@ -454,8 +458,9 @@ describe('REC-007: Convert to WAV blob on stop', () => {
       requestMicrophoneAccess: vi.fn().mockResolvedValue({} as MediaStream),
       startRecording: vi.fn().mockResolvedValue(undefined),
       stopRecording: vi.fn().mockResolvedValue({
-        blob: new Blob(['audio data'], { type: 'audio/wav' }),
+        audioBlob: new Blob(['audio data'], { type: 'audio/webm' }),
         duration: 5.5,
+        waveformData: [],
       }),
       getRecordingState: vi.fn()
         .mockReturnValueOnce('inactive')
@@ -594,8 +599,9 @@ describe('RecordButton: Component states', () => {
       requestMicrophoneAccess: vi.fn().mockResolvedValue({} as MediaStream),
       startRecording: vi.fn().mockResolvedValue(undefined),
       stopRecording: vi.fn().mockResolvedValue({
-        blob: new Blob(),
+        audioBlob: new Blob(),
         duration: 5,
+        waveformData: [],
       }),
       getRecordingState: vi.fn().mockReturnValue('inactive'),
       dispose: vi.fn(),

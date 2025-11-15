@@ -194,8 +194,11 @@ export function RecordButton({
       setRecordingState('idle');
       setVuLevel(0);
 
-      // Notify parent component
-      onRecordingComplete(result);
+      // Notify parent component (map audioBlob to blob for callback)
+      onRecordingComplete({
+        blob: result.audioBlob,
+        duration: result.duration,
+      });
     } catch (error) {
       // [EARS: ERR-003] Display error on encoding failure
       setRecordingState('error');

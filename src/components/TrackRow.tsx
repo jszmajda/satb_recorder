@@ -89,12 +89,12 @@ export function TrackRow({
       style={{
         display: 'flex',
         alignItems: 'center',
-        gap: '1rem',
-        padding: '0.75rem',
+        gap: '0.4rem',
+        padding: '0.4rem',
         backgroundColor: '#2c2c2c',
         border: '1px solid #444',
-        borderRadius: '6px',
-        marginBottom: '0.5rem',
+        borderRadius: '3px',
+        marginBottom: '0.3rem',
       }}
     >
       {/* Delete Button */}
@@ -103,17 +103,17 @@ export function TrackRow({
         onClick={handleDeleteClick}
         aria-label="Delete track"
         style={{
-          padding: '0.5rem 0.75rem',
+          padding: '0.3rem 0.5rem',
           backgroundColor: '#d32f2f',
           color: '#fff',
           border: 'none',
-          borderRadius: '4px',
+          borderRadius: '3px',
           cursor: 'pointer',
-          fontSize: '0.85rem',
+          fontSize: '0.7rem',
           fontWeight: 'bold',
         }}
       >
-        Delete
+        Del
       </button>
 
       {/* Track Name Input */}
@@ -124,12 +124,12 @@ export function TrackRow({
         onChange={handleNameChange}
         style={{
           flex: '1',
-          padding: '0.5rem',
+          padding: '0.3rem 0.4rem',
           backgroundColor: '#444',
           color: '#fff',
           border: '1px solid #666',
-          borderRadius: '4px',
-          fontSize: '0.95rem',
+          borderRadius: '3px',
+          fontSize: '0.8rem',
         }}
       />
 
@@ -140,18 +140,18 @@ export function TrackRow({
         aria-label="Solo track"
         className={track.soloed ? 'active' : ''}
         style={{
-          padding: '0.5rem 0.75rem',
+          padding: '0.3rem 0.5rem',
           backgroundColor: track.soloed ? '#4caf50' : '#555',
           color: '#fff',
           border: 'none',
-          borderRadius: '4px',
+          borderRadius: '3px',
           cursor: 'pointer',
-          fontSize: '0.85rem',
+          fontSize: '0.7rem',
           fontWeight: 'bold',
-          minWidth: '50px',
+          minWidth: '38px',
         }}
       >
-        Solo
+        S
       </button>
 
       {/* Mute Button */}
@@ -161,23 +161,23 @@ export function TrackRow({
         aria-label="Mute track"
         className={track.muted ? 'active' : ''}
         style={{
-          padding: '0.5rem 0.75rem',
+          padding: '0.3rem 0.5rem',
           backgroundColor: track.muted ? '#ff9800' : '#555',
           color: '#fff',
           border: 'none',
-          borderRadius: '4px',
+          borderRadius: '3px',
           cursor: 'pointer',
-          fontSize: '0.85rem',
+          fontSize: '0.7rem',
           fontWeight: 'bold',
-          minWidth: '50px',
+          minWidth: '38px',
         }}
       >
-        Mute
+        M
       </button>
 
       {/* Volume Slider */}
       {/* [EARS: TRACK-008, TRACK-009] Volume control (0-100), grayed when muted */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
         <input
           type="range"
           min="0"
@@ -186,15 +186,15 @@ export function TrackRow({
           onChange={handleVolumeChange}
           aria-label="Volume slider"
           style={{
-            width: '100px',
+            width: '70px',
             opacity: track.muted ? 0.4 : 1,
           }}
         />
         <span
           style={{
             color: '#888',
-            fontSize: '0.85rem',
-            minWidth: '35px',
+            fontSize: '0.7rem',
+            minWidth: '28px',
           }}
         >
           {track.volume}%
@@ -203,11 +203,11 @@ export function TrackRow({
 
       {/* Waveform Visualization */}
       {/* [EARS: VIS-002] Display waveform sparkline */}
-      <div style={{ flex: 2, minWidth: '200px' }}>
+      <div style={{ flex: 2, minWidth: '150px' }}>
         <Waveform
           data={track.waveformData}
-          width={300}
-          height={40}
+          width={250}
+          height={30}
           currentTime={currentTime}
           duration={maxDuration || track.duration}
           trackDuration={track.duration}

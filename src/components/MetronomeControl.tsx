@@ -1,7 +1,8 @@
 // [EARS: MET-002, MET-003, MET-005, OVER-001] Metronome control with BPM and visual feedback
 
 import { useState, useEffect, useRef } from 'react';
-import { Metronome } from '../audio/metronome';
+import { useProjectStore } from '../store/useProjectStore';
+import { useMetronome } from '../contexts/MetronomeContext';
 
 const MIN_BPM = 40;
 const MAX_BPM = 240;
@@ -9,60 +10,67 @@ const FLASH_DURATION = 100; // milliseconds
 
 export function MetronomeControl() {
   const [bpm, setBpm] = useState(120);
-  const [isFlashing, setIsFlashing] = useState(false);
-  const [isBeatOne, setIsBeatOne] = useState(false);
-  const [overdubEnabled, setOverdubEnabled] = useState(false);
 
-  const metronomeRef = useRef<Metronome | null>(null);
+  // [EARS: OVER-001] Use global project store for overdub state
+  const overdubEnabled = useProjectStore((state) => state.currentProject?.overdubEnabled ?? false);
+  const setOverdubEnabled = useProjectStore((state) => state.setOverdubEnabled);
+
+  // Get shared metronome instance from context
+  const { getMetronome } = useMetronome();
   const flashTimeoutRef = useRef<number | null>(null);
+  const flashElementRef = useRef<HTMLDivElement | null>(null);
 
   /**
-   * Initialize metronome on mount
-   * [EARS: MET-003] Set up metronome with default BPM
+   * Set up visual callback on shared metronome
+   * [EARS: MET-005] Flash indicator on each beat
    */
   useEffect(() => {
-    metronomeRef.current = new Metronome(bpm);
+    const metronome = getMetronome();
+    if (!metronome) return;
 
     /**
      * Visual callback for metronome beats
      * [EARS: MET-005] Flash indicator on each beat
+     * Uses data attribute to trigger CSS change (survives React re-renders)
      */
-    const handleVisualCallback = (beatNumber: number) => {
-      setIsFlashing(true);
-      setIsBeatOne(beatNumber === 1);
+    const handleVisualCallback = () => {
+      const element = flashElementRef.current;
+      if (!element) return;
+
+      // Use dataset attribute to trigger CSS change (survives React re-renders)
+      element.dataset.flashing = 'true';
 
       // Clear flash after duration
       if (flashTimeoutRef.current) {
         clearTimeout(flashTimeoutRef.current);
       }
       flashTimeoutRef.current = window.setTimeout(() => {
-        setIsFlashing(false);
-        setIsBeatOne(false);
+        if (element) {
+          element.dataset.flashing = 'false';
+        }
       }, FLASH_DURATION);
     };
 
-    metronomeRef.current.setVisualCallback(handleVisualCallback);
+    metronome.setVisualCallback(handleVisualCallback);
 
     // Cleanup on unmount
     return () => {
       if (flashTimeoutRef.current) {
         clearTimeout(flashTimeoutRef.current);
       }
-      if (metronomeRef.current) {
-        metronomeRef.current.dispose();
-      }
     };
-  }, []);
+  }, [getMetronome]);
 
   /**
    * Update metronome BPM when bpm state changes
    * [EARS: MET-003] Sync BPM with metronome instance
    */
   useEffect(() => {
-    if (metronomeRef.current) {
-      metronomeRef.current.setBpm(bpm);
+    const metronome = getMetronome();
+    if (metronome) {
+      metronome.setBpm(bpm);
     }
-  }, [bpm]);
+  }, [bpm, getMetronome]);
 
   /**
    * Handle BPM input change
@@ -127,40 +135,51 @@ export function MetronomeControl() {
    * Toggle overdub mode
    * [EARS: OVER-001] Enable/disable overdub
    */
-  const handleOverdubToggle = () => {
-    setOverdubEnabled(!overdubEnabled);
+  const handleOverdubToggle = async () => {
+    await setOverdubEnabled(!overdubEnabled);
   };
 
   return (
-    <div
-      className="metronome-control"
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '1rem',
-        padding: '1rem',
-        backgroundColor: '#2c2c2c',
-        border: '1px solid #444',
-        borderRadius: '8px',
-      }}
-    >
-      {/* Visual Flash Indicator */}
-      {/* [EARS: MET-005] Visual feedback for metronome beats */}
+    <>
+      {/* CSS for metronome flash - using data attribute to survive React re-renders */}
+      <style>{`
+        [data-testid="metronome-flash"] {
+          background-color: #444;
+        }
+        [data-testid="metronome-flash"][data-flashing="true"] {
+          background-color: #4caf50;
+        }
+      `}</style>
+
       <div
-        data-testid="metronome-flash"
-        className={`${isFlashing ? 'flash-active' : ''} ${isBeatOne ? 'beat-one' : ''}`}
+        className="metronome-control"
         style={{
-          width: '40px',
-          height: '40px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem',
+          padding: '0.5rem',
+          backgroundColor: '#2c2c2c',
+          border: '1px solid #444',
           borderRadius: '4px',
-          backgroundColor: isFlashing ? (isBeatOne ? '#ff6b6b' : '#4caf50') : '#444',
-          transition: 'background-color 0.05s ease',
-          border: '2px solid #666',
         }}
-      />
+      >
+        {/* Visual Flash Indicator */}
+        {/* [EARS: MET-005] Visual feedback for metronome beats */}
+        <div
+          ref={flashElementRef}
+          data-testid="metronome-flash"
+          data-flashing="false"
+          style={{
+            width: '28px',
+            height: '28px',
+            borderRadius: '3px',
+            transition: 'background-color 0.05s ease',
+            border: '1px solid #666',
+          }}
+        />
 
       {/* BPM Controls */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
         {/* Decrement Button */}
         {/* [EARS: MET-002] Decrease BPM */}
         <button
@@ -168,14 +187,14 @@ export function MetronomeControl() {
           disabled={bpm <= MIN_BPM}
           aria-label="Decrement BPM"
           style={{
-            padding: '0.5rem 0.75rem',
+            padding: '0.3rem 0.5rem',
             backgroundColor: bpm <= MIN_BPM ? '#666' : '#555',
             color: '#fff',
             border: 'none',
-            borderRadius: '4px',
+            borderRadius: '3px',
             cursor: bpm <= MIN_BPM ? 'not-allowed' : 'pointer',
             fontWeight: 'bold',
-            fontSize: '1.2rem',
+            fontSize: '0.9rem',
           }}
         >
           -
@@ -192,19 +211,19 @@ export function MetronomeControl() {
           max={MAX_BPM}
           aria-label="BPM"
           style={{
-            width: '70px',
-            padding: '0.5rem',
-            fontSize: '1.2rem',
+            width: '55px',
+            padding: '0.3rem',
+            fontSize: '0.9rem',
             fontWeight: 'bold',
             textAlign: 'center',
             backgroundColor: '#444',
             color: '#fff',
             border: '1px solid #666',
-            borderRadius: '4px',
+            borderRadius: '3px',
           }}
         />
 
-        <span style={{ color: '#888', fontSize: '0.9rem' }}>BPM</span>
+        <span style={{ color: '#888', fontSize: '0.75rem' }}>BPM</span>
 
         {/* Increment Button */}
         {/* [EARS: MET-002] Increase BPM */}
@@ -213,14 +232,14 @@ export function MetronomeControl() {
           disabled={bpm >= MAX_BPM}
           aria-label="Increment BPM"
           style={{
-            padding: '0.5rem 0.75rem',
+            padding: '0.3rem 0.5rem',
             backgroundColor: bpm >= MAX_BPM ? '#666' : '#555',
             color: '#fff',
             border: 'none',
-            borderRadius: '4px',
+            borderRadius: '3px',
             cursor: bpm >= MAX_BPM ? 'not-allowed' : 'pointer',
             fontWeight: 'bold',
-            fontSize: '1.2rem',
+            fontSize: '0.9rem',
           }}
         >
           +
@@ -229,7 +248,7 @@ export function MetronomeControl() {
 
       {/* Overdub Toggle */}
       {/* [EARS: OVER-001] Toggle overdub mode */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginLeft: '1rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', marginLeft: '0.5rem' }}>
         <input
           type="checkbox"
           checked={overdubEnabled}
@@ -237,8 +256,8 @@ export function MetronomeControl() {
           id="overdub-toggle"
           aria-label="Overdub mode"
           style={{
-            width: '20px',
-            height: '20px',
+            width: '16px',
+            height: '16px',
             cursor: 'pointer',
           }}
         />
@@ -246,7 +265,7 @@ export function MetronomeControl() {
           htmlFor="overdub-toggle"
           style={{
             color: '#fff',
-            fontSize: '0.9rem',
+            fontSize: '0.75rem',
             cursor: 'pointer',
           }}
         >
@@ -254,5 +273,6 @@ export function MetronomeControl() {
         </label>
       </div>
     </div>
+    </>
   );
 }

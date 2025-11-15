@@ -148,10 +148,10 @@ export function TopBar() {
     <div className="top-bar" style={{
       display: 'flex',
       alignItems: 'center',
-      gap: '1rem',
-      padding: '1rem',
+      gap: '0.5rem',
+      padding: '0.5rem 0.75rem',
       backgroundColor: '#2c2c2c',
-      borderBottom: '2px solid #444',
+      borderBottom: '1px solid #444',
     }}>
       {/* Project Name */}
       <div className="project-name" style={{ flex: 1 }}>
@@ -164,20 +164,20 @@ export function TopBar() {
             onKeyDown={handleNameKeyDown}
             autoFocus
             style={{
-              fontSize: '1.25rem',
+              fontSize: '0.95rem',
               fontWeight: 'bold',
               background: '#444',
               color: '#fff',
               border: '1px solid #666',
-              padding: '0.25rem 0.5rem',
-              borderRadius: '4px',
+              padding: '0.2rem 0.4rem',
+              borderRadius: '3px',
             }}
           />
         ) : (
           <h1
             onClick={startEditingName}
             style={{
-              fontSize: '1.25rem',
+              fontSize: '0.95rem',
               fontWeight: 'bold',
               color: currentProject ? '#fff' : '#888',
               cursor: currentProject ? 'pointer' : 'default',
@@ -193,13 +193,14 @@ export function TopBar() {
       <button
         onClick={handleNewProject}
         style={{
-          padding: '0.5rem 1rem',
+          padding: '0.35rem 0.6rem',
           backgroundColor: '#4caf50',
           color: '#fff',
           border: 'none',
-          borderRadius: '4px',
+          borderRadius: '3px',
           cursor: 'pointer',
           fontWeight: 'bold',
+          fontSize: '0.8rem',
         }}
       >
         New Project

@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Mixer } from '../audio/mixer';
+import { useMetronome } from '../contexts/MetronomeContext';
 
 export interface PlaybackTrack {
   id: string;
@@ -59,6 +60,9 @@ export function PlaybackControls({
 
   // Use external currentTime if provided, otherwise use internal state
   const currentTime = externalCurrentTime !== undefined ? externalCurrentTime : internalCurrentTime;
+
+  // Get shared metronome instance from context
+  const { getMetronome } = useMetronome();
 
   const mixerRef = useRef<Mixer | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -149,6 +153,12 @@ export function PlaybackControls({
     // [EARS: PLAY-006, PLAY-007, PLAY-008] Mixer handles mute/solo/sync logic
     mixerRef.current.play();
     setPlayState('playing');
+
+    // Start metronome during playback
+    const metronome = getMetronome();
+    if (metronome) {
+      metronome.start();
+    }
   };
 
   /**
@@ -164,6 +174,12 @@ export function PlaybackControls({
 
     mixerRef.current.stop();
     setPlayState('paused');
+
+    // Stop metronome when pausing
+    const metronome = getMetronome();
+    if (metronome) {
+      metronome.stop();
+    }
   };
 
   /**
@@ -175,6 +191,12 @@ export function PlaybackControls({
 
     mixerRef.current.stop();
     setPlayState('stopped');
+
+    // Stop metronome when stopping
+    const metronome = getMetronome();
+    if (metronome) {
+      metronome.stop();
+    }
 
     // Reset time to 0
     if (externalCurrentTime !== undefined && onCurrentTimeChange) {
@@ -236,18 +258,18 @@ export function PlaybackControls({
     <div
       className="playback-controls"
       style={{
-        padding: '1rem',
+        padding: '0.5rem',
         backgroundColor: '#2c2c2c',
         border: '1px solid #444',
-        borderRadius: '8px',
+        borderRadius: '4px',
       }}
     >
       {/* Transport Buttons */}
       <div
         style={{
           display: 'flex',
-          gap: '0.5rem',
-          marginBottom: '1rem',
+          gap: '0.3rem',
+          marginBottom: '0.4rem',
         }}
       >
         {/* Play/Pause Toggle Button */}
@@ -257,13 +279,13 @@ export function PlaybackControls({
           aria-label={playState === 'playing' ? 'Pause' : 'Play'}
           disabled={isLoading}
           style={{
-            padding: '0.5rem 1.5rem',
+            padding: '0.35rem 0.8rem',
             backgroundColor: isLoading ? '#666' : '#4caf50',
             color: '#fff',
             border: 'none',
-            borderRadius: '4px',
+            borderRadius: '3px',
             cursor: isLoading ? 'not-allowed' : 'pointer',
-            fontSize: '1rem',
+            fontSize: '0.85rem',
             fontWeight: 'bold',
             opacity: isLoading ? 0.6 : 1,
           }}
@@ -277,44 +299,45 @@ export function PlaybackControls({
           onClick={handleStop}
           aria-label="Stop"
           style={{
-            padding: '0.5rem 1.5rem',
+            padding: '0.35rem 0.8rem',
             backgroundColor: '#f44336',
             color: '#fff',
             border: 'none',
-            borderRadius: '4px',
+            borderRadius: '3px',
             cursor: 'pointer',
-            fontSize: '1rem',
+            fontSize: '0.85rem',
             fontWeight: 'bold',
           }}
         >
           ■
         </button>
-      </div>
 
-      {/* Loading Indicator */}
-      {isLoading && (
+        {/* Time Display */}
+        {/* [EARS: PLAY-005] Display elapsed time and total duration */}
         <div
           style={{
-            fontSize: '0.85rem',
-            color: '#ffeb3b',
-            marginBottom: '0.5rem',
+            fontSize: '0.9rem',
+            fontWeight: 'bold',
+            color: '#fff',
+            fontFamily: 'monospace',
+            marginLeft: '0.5rem',
           }}
         >
-          Loading tracks...
+          {formatTime(currentTime)} / {formatTime(totalDuration)}
         </div>
-      )}
 
-      {/* Time Display */}
-      {/* [EARS: PLAY-005] Display elapsed time and total duration */}
-      <div
-        style={{
-          fontSize: '1.5rem',
-          fontWeight: 'bold',
-          color: '#fff',
-          fontFamily: 'monospace',
-        }}
-      >
-        {formatTime(currentTime)} / {formatTime(totalDuration)}
+        {/* Loading Indicator */}
+        {isLoading && (
+          <div
+            style={{
+              fontSize: '0.7rem',
+              color: '#ffeb3b',
+              marginLeft: '0.5rem',
+            }}
+          >
+            Loading...
+          </div>
+        )}
       </div>
     </div>
   );

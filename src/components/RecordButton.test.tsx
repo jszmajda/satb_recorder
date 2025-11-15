@@ -6,6 +6,7 @@ import { Metronome } from '../audio/metronome';
 import { VUMeter } from '../audio/vuMeter';
 import { Visualizer } from '../audio/visualizer';
 import { Mixer } from '../audio/mixer';
+import { MetronomeProvider } from '../contexts/MetronomeContext';
 
 // Mock AudioContext
 const mockAudioContext = {
@@ -22,6 +23,15 @@ vi.mock('../audio/metronome');
 vi.mock('../audio/vuMeter');
 vi.mock('../audio/visualizer');
 vi.mock('../audio/mixer');
+
+// Helper function to render with MetronomeProvider
+const renderWithProvider = (component: React.ReactElement) => {
+  return render(
+    <MetronomeProvider>
+      {component}
+    </MetronomeProvider>
+  );
+};
 
 describe('REC-001: Request microphone permission on Add Track', () => {
   let mockRecorder: any;
@@ -78,7 +88,7 @@ describe('REC-001: Request microphone permission on Add Track', () => {
   // ✅ Happy path
   test('requests microphone permission when clicked', async () => {
     const handleRecordingComplete = vi.fn();
-    render(
+    renderWithProvider(
       <RecordButton
         voicePartId="soprano"
         onRecordingComplete={handleRecordingComplete}
@@ -96,7 +106,7 @@ describe('REC-001: Request microphone permission on Add Track', () => {
   test('displays error when permission denied', async () => {
     mockRecorder.requestMicrophoneAccess.mockRejectedValue(new Error('Permission denied'));
 
-    render(<RecordButton voicePartId="soprano" onRecordingComplete={vi.fn()} />);
+    renderWithProvider(<RecordButton voicePartId="soprano" onRecordingComplete={vi.fn()} />);
 
     const button = screen.getByRole('button', { name: /record|add track/i });
     fireEvent.click(button);
@@ -111,7 +121,7 @@ describe('REC-001: Request microphone permission on Add Track', () => {
   test('does not start recording if permission denied', async () => {
     mockRecorder.requestMicrophoneAccess.mockRejectedValue(new Error('Permission denied'));
 
-    render(<RecordButton voicePartId="soprano" onRecordingComplete={vi.fn()} />);
+    renderWithProvider(<RecordButton voicePartId="soprano" onRecordingComplete={vi.fn()} />);
 
     const button = screen.getByRole('button', { name: /record|add track/i });
     fireEvent.click(button);
@@ -168,7 +178,7 @@ describe('REC-002: Display countdown (3-2-1)', () => {
   });
 
   test('displays countdown after permission granted', async () => {
-    render(<RecordButton voicePartId="soprano" onRecordingComplete={vi.fn()} />);
+    renderWithProvider(<RecordButton voicePartId="soprano" onRecordingComplete={vi.fn()} />);
 
     const button = screen.getByRole('button', { name: /record|add track/i });
 
@@ -185,7 +195,7 @@ describe('REC-002: Display countdown (3-2-1)', () => {
   });
 
   test('countdown shows 3, 2, 1 in sequence', async () => {
-    render(<RecordButton voicePartId="soprano" onRecordingComplete={vi.fn()} />);
+    renderWithProvider(<RecordButton voicePartId="soprano" onRecordingComplete={vi.fn()} />);
 
     const button = screen.getByRole('button', { name: /record|add track/i });
 
@@ -210,7 +220,7 @@ describe('REC-002: Display countdown (3-2-1)', () => {
   });
 
   test('starts recording after countdown completes', async () => {
-    render(<RecordButton voicePartId="soprano" onRecordingComplete={vi.fn()} />);
+    renderWithProvider(<RecordButton voicePartId="soprano" onRecordingComplete={vi.fn()} />);
 
     const button = screen.getByRole('button', { name: /record|add track/i });
 
@@ -274,7 +284,7 @@ describe('REC-003: Start MediaRecorder and metronome', () => {
   });
 
   test('starts metronome when recording begins', async () => {
-    render(<RecordButton voicePartId="soprano" onRecordingComplete={vi.fn()} bpm={120} />);
+    renderWithProvider(<RecordButton voicePartId="soprano" onRecordingComplete={vi.fn()} bpm={120} />);
 
     const button = screen.getByRole('button', { name: /record|add track/i });
 
@@ -295,7 +305,7 @@ describe('REC-003: Start MediaRecorder and metronome', () => {
   });
 
   test('starts MediaRecorder when recording begins', async () => {
-    render(<RecordButton voicePartId="soprano" onRecordingComplete={vi.fn()} />);
+    renderWithProvider(<RecordButton voicePartId="soprano" onRecordingComplete={vi.fn()} />);
 
     const button = screen.getByRole('button', { name: /record|add track/i });
 
@@ -316,7 +326,7 @@ describe('REC-003: Start MediaRecorder and metronome', () => {
   });
 
   test('starts both metronome and recorder together', async () => {
-    render(<RecordButton voicePartId="soprano" onRecordingComplete={vi.fn()} bpm={120} />);
+    renderWithProvider(<RecordButton voicePartId="soprano" onRecordingComplete={vi.fn()} bpm={120} />);
 
     const button = screen.getByRole('button', { name: /record|add track/i });
 
@@ -380,7 +390,7 @@ describe('REC-004: Display VU meter during recording', () => {
   });
 
   test('displays VU meter during recording', async () => {
-    render(<RecordButton voicePartId="soprano" onRecordingComplete={vi.fn()} />);
+    renderWithProvider(<RecordButton voicePartId="soprano" onRecordingComplete={vi.fn()} />);
 
     const button = screen.getByRole('button', { name: /record|add track/i });
 
@@ -404,7 +414,7 @@ describe('REC-004: Display VU meter during recording', () => {
     const mockStream = {} as MediaStream;
     mockRecorder.requestMicrophoneAccess.mockResolvedValue(mockStream);
 
-    render(<RecordButton voicePartId="soprano" onRecordingComplete={vi.fn()} />);
+    renderWithProvider(<RecordButton voicePartId="soprano" onRecordingComplete={vi.fn()} />);
 
     const button = screen.getByRole('button', { name: /record|add track/i });
 
@@ -427,7 +437,7 @@ describe('REC-004: Display VU meter during recording', () => {
   test('VU meter shows current level', async () => {
     mockVUMeter.getVolume.mockReturnValue(0.7);
 
-    render(<RecordButton voicePartId="soprano" onRecordingComplete={vi.fn()} />);
+    renderWithProvider(<RecordButton voicePartId="soprano" onRecordingComplete={vi.fn()} />);
 
     const button = screen.getByRole('button', { name: /record|add track/i });
 
@@ -490,7 +500,7 @@ describe('REC-007: Convert to WAV blob on stop', () => {
   });
 
   test('stops recording when stop button clicked', async () => {
-    render(<RecordButton voicePartId="soprano" onRecordingComplete={vi.fn()} />);
+    renderWithProvider(<RecordButton voicePartId="soprano" onRecordingComplete={vi.fn()} />);
 
     const startButton = screen.getByRole('button', { name: /record|add track/i });
 
@@ -523,7 +533,7 @@ describe('REC-007: Convert to WAV blob on stop', () => {
   test('converts recording to WAV blob', async () => {
     const handleRecordingComplete = vi.fn();
 
-    render(
+    renderWithProvider(
       <RecordButton
         voicePartId="soprano"
         onRecordingComplete={handleRecordingComplete}
@@ -563,7 +573,7 @@ describe('REC-007: Convert to WAV blob on stop', () => {
   });
 
   test('stops metronome when recording stops', async () => {
-    render(<RecordButton voicePartId="soprano" onRecordingComplete={vi.fn()} />);
+    renderWithProvider(<RecordButton voicePartId="soprano" onRecordingComplete={vi.fn()} />);
 
     const startButton = screen.getByRole('button', { name: /record|add track/i });
 
@@ -619,7 +629,7 @@ describe('RecordButton: Component states', () => {
   });
 
   test('shows record button initially', () => {
-    render(<RecordButton voicePartId="soprano" onRecordingComplete={vi.fn()} />);
+    renderWithProvider(<RecordButton voicePartId="soprano" onRecordingComplete={vi.fn()} />);
 
     const button = screen.getByRole('button', { name: /record|add track/i });
     expect(button).toBeInTheDocument();
@@ -628,7 +638,7 @@ describe('RecordButton: Component states', () => {
   test('disables button during countdown', async () => {
     vi.useFakeTimers();
 
-    render(<RecordButton voicePartId="soprano" onRecordingComplete={vi.fn()} />);
+    renderWithProvider(<RecordButton voicePartId="soprano" onRecordingComplete={vi.fn()} />);
 
     const button = screen.getByRole('button', { name: /record|add track/i });
 
@@ -648,7 +658,7 @@ describe('RecordButton: Component states', () => {
 
     mockRecorder.getRecordingState.mockReturnValue('recording');
 
-    render(<RecordButton voicePartId="soprano" onRecordingComplete={vi.fn()} />);
+    renderWithProvider(<RecordButton voicePartId="soprano" onRecordingComplete={vi.fn()} />);
 
     const startButton = screen.getByRole('button', { name: /record|add track/i });
 
@@ -678,7 +688,7 @@ describe('RecordButton: Component states', () => {
       .mockReturnValueOnce('recording')
       .mockReturnValue('inactive');
 
-    render(<RecordButton voicePartId="soprano" onRecordingComplete={vi.fn()} />);
+    renderWithProvider(<RecordButton voicePartId="soprano" onRecordingComplete={vi.fn()} />);
 
     const startButton = screen.getByRole('button', { name: /record|add track/i });
 
@@ -777,7 +787,7 @@ describe('REC-005, OVER-002: Overdub muting logic', () => {
       { id: 'track-1', audioBlob: new Blob(), volume: 100, muted: false, soloed: false },
     ];
 
-    render(
+    renderWithProvider(
       <RecordButton
         voicePartId="soprano"
         bpm={120}
@@ -820,7 +830,7 @@ describe('REC-005, OVER-002: Overdub muting logic', () => {
       },
     ];
 
-    render(
+    renderWithProvider(
       <RecordButton
         voicePartId="soprano"
         bpm={120}
@@ -863,7 +873,7 @@ describe('REC-005, OVER-002: Overdub muting logic', () => {
       },
     ];
 
-    render(
+    renderWithProvider(
       <RecordButton
         voicePartId="soprano"
         bpm={120}

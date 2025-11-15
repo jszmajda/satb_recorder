@@ -12,7 +12,7 @@ import { useErrorStore } from './store/useErrorStore';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { Visualizer } from './audio/visualizer';
 import type { VoicePartType } from './store/types';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 
 function App() {
   const currentProject = useProjectStore((state) => state.currentProject);
@@ -23,6 +23,7 @@ function App() {
   const setTrackMute = useProjectStore((state) => state.setTrackMute);
   const setTrackVolume = useProjectStore((state) => state.setTrackVolume);
   const setTrackName = useProjectStore((state) => state.setTrackName);
+  const loadProject = useProjectStore((state) => state.loadProject);
 
   // Error handling [EARS: ERR-001, ERR-002, ERR-003]
   const error = useErrorStore((state) => state.error);
@@ -77,6 +78,26 @@ function App() {
   }, []);
 
   /**
+   * Initialize project from URL on mount
+   * Check for ?project=<id> parameter and load that project
+   */
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const projectId = params.get('project');
+
+    if (projectId && !currentProject) {
+      // Try to load the project from the URL
+      loadProject(projectId).catch((error) => {
+        console.error('Failed to load project from URL:', error);
+        // Clear invalid project ID from URL
+        const url = new URL(window.location.href);
+        url.searchParams.delete('project');
+        window.history.replaceState({}, '', url.toString());
+      });
+    }
+  }, []); // Only run on mount
+
+  /**
    * Keyboard shortcut: Ctrl+Z/Cmd+Z for undo delete
    * [EARS: TRACK-003] Restore last deleted track
    */
@@ -97,48 +118,37 @@ function App() {
       <ErrorNotification error={error} onDismiss={clearError} />
 
       <TopBar />
-      <div className="p-8">
-        <div className="max-w-7xl mx-auto space-y-6">
+      <div className="p-3">
+        <div className="max-w-7xl mx-auto space-y-2">
           {!currentProject ? (
             <>
-              <p className="text-gray-400 text-lg">
+              <p className="text-gray-400 text-sm">
                 Multi-track vocal harmony recorder for Soprano, Alto, Tenor, and Bass voices.
               </p>
-              <p className="text-gray-500 text-sm mt-4">
+              <p className="text-gray-500 text-xs mt-2">
                 Create a new project to get started!
               </p>
             </>
           ) : (
             <>
-              <div>
-                <h2 className="text-xl font-bold mb-4">Transport Controls</h2>
-                {/* [EARS: SEEK-001, SEEK-002, SEEK-003, PLAY-001 through PLAY-008] PlaybackControls with seeking and playback */}
-                <PlaybackControls
-                  totalDuration={maxDuration}
-                  tracks={allTracks}
-                  currentTime={currentTime}
-                  onCurrentTimeChange={setCurrentTime}
-                  onSeek={setCurrentTime}
-                />
-              </div>
+              {/* [EARS: SEEK-001, SEEK-002, SEEK-003, PLAY-001 through PLAY-008] PlaybackControls with seeking and playback */}
+              <PlaybackControls
+                totalDuration={maxDuration}
+                tracks={allTracks}
+                currentTime={currentTime}
+                onCurrentTimeChange={setCurrentTime}
+                onSeek={setCurrentTime}
+              />
 
-              <div>
-                <h2 className="text-xl font-bold mb-4">Metronome</h2>
+              {/* Metronome and Tone Generator on same row */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
                 <MetronomeControl />
-              </div>
-
-              <div>
-                <h2 className="text-xl font-bold mb-4">Reference Tones</h2>
                 <ToneGenerator />
               </div>
 
-              <div>
-                <h2 className="text-xl font-bold mb-4">Microphone</h2>
-                <MicrophoneSelector />
-              </div>
+              <MicrophoneSelector />
 
-              <div className="mt-8 space-y-4">
-                <h2 className="text-xl font-bold mb-4">Voice Parts</h2>
+              <div className="space-y-2">
                 {currentProject.voiceParts.map((voicePart) => {
                   // Map voice part type to color
                   const colorMap = {
@@ -212,27 +222,27 @@ function App() {
               {/* Keyboard Shortcuts Hint */}
               <div
                 style={{
-                  marginTop: '2rem',
-                  padding: '0.75rem',
+                  marginTop: '0.5rem',
+                  padding: '0.4rem 0.6rem',
                   backgroundColor: '#1a1a1a',
                   border: '1px solid #333',
-                  borderRadius: '4px',
-                  fontSize: '0.75rem',
+                  borderRadius: '3px',
+                  fontSize: '0.65rem',
                   color: '#888',
                 }}
               >
-                <strong style={{ color: '#aaa' }}>Keyboard Shortcuts:</strong>
-                <span style={{ marginLeft: '1rem' }}>
-                  <kbd style={{ padding: '0.2rem 0.4rem', backgroundColor: '#333', borderRadius: '3px', marginRight: '0.3rem' }}>
+                <strong style={{ color: '#aaa' }}>Shortcuts:</strong>
+                <span style={{ marginLeft: '0.75rem' }}>
+                  <kbd style={{ padding: '0.1rem 0.3rem', backgroundColor: '#333', borderRadius: '2px', marginRight: '0.25rem' }}>
                     Space
                   </kbd>
                   Play/Pause
                 </span>
-                <span style={{ marginLeft: '1rem' }}>
-                  <kbd style={{ padding: '0.2rem 0.4rem', backgroundColor: '#333', borderRadius: '3px', marginRight: '0.3rem' }}>
+                <span style={{ marginLeft: '0.75rem' }}>
+                  <kbd style={{ padding: '0.1rem 0.3rem', backgroundColor: '#333', borderRadius: '2px', marginRight: '0.25rem' }}>
                     Ctrl+Z
                   </kbd>
-                  Undo Delete
+                  Undo
                 </span>
               </div>
             </>

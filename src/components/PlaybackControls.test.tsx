@@ -2,6 +2,7 @@ import { describe, test, expect, beforeEach, vi, afterEach } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { PlaybackControls } from './PlaybackControls';
 import { Mixer } from '../audio/mixer';
+import { MetronomeProvider } from '../contexts/MetronomeContext';
 
 // Mock AudioContext
 const mockAudioContext = {
@@ -15,6 +16,17 @@ global.AudioContext = vi.fn(() => mockAudioContext) as any;
 
 // Mock Mixer class
 vi.mock('../audio/mixer');
+// Mock Metronome class
+vi.mock('../audio/metronome');
+
+// Helper function to render with MetronomeProvider
+const renderWithProvider = (component: React.ReactElement) => {
+  return render(
+    <MetronomeProvider>
+      {component}
+    </MetronomeProvider>
+  );
+};
 
 describe('PLAY-001: Start playback from current playhead position', () => {
   let mockMixer: any;
@@ -40,7 +52,7 @@ describe('PLAY-001: Start playback from current playhead position', () => {
 
   // ✅ Happy path
   test('calls mixer.play() when Play button clicked', async () => {
-    render(<PlaybackControls />);
+    renderWithProvider(<PlaybackControls />);
 
     const playButton = screen.getByRole('button', { name: /play/i });
     fireEvent.click(playButton);
@@ -52,7 +64,7 @@ describe('PLAY-001: Start playback from current playhead position', () => {
     vi.useFakeTimers();
     mockMixer.isPlaying.mockReturnValue(false);
 
-    const { rerender } = render(<PlaybackControls />);
+    const { rerender } = renderWithProvider(<PlaybackControls />);
 
     const playButton = screen.getByRole('button', { name: /play/i });
     mockMixer.isPlaying.mockReturnValue(true);
@@ -64,7 +76,11 @@ describe('PLAY-001: Start playback from current playhead position', () => {
       await Promise.resolve();
     });
 
-    rerender(<PlaybackControls />);
+    rerender(
+      <MetronomeProvider>
+        <PlaybackControls />
+      </MetronomeProvider>
+    );
 
     expect(screen.getByRole('button', { name: /pause/i })).toBeInTheDocument();
 
@@ -74,7 +90,7 @@ describe('PLAY-001: Start playback from current playhead position', () => {
   test('starts playback when stopped', () => {
     mockMixer.isPlaying.mockReturnValue(false);
 
-    render(<PlaybackControls />);
+    renderWithProvider(<PlaybackControls />);
 
     const playButton = screen.getByRole('button', { name: /play/i });
     fireEvent.click(playButton);
@@ -110,7 +126,7 @@ describe('PLAY-002: Pause playback and maintain playhead position', () => {
     vi.useFakeTimers();
     mockMixer.isPlaying.mockReturnValue(true);
 
-    const { rerender } = render(<PlaybackControls />);
+    const { rerender } = renderWithProvider(<PlaybackControls />);
 
     // Let state sync happen
     await act(async () => {
@@ -118,7 +134,11 @@ describe('PLAY-002: Pause playback and maintain playhead position', () => {
       await Promise.resolve();
     });
 
-    rerender(<PlaybackControls />);
+    rerender(
+      <MetronomeProvider>
+        <PlaybackControls />
+      </MetronomeProvider>
+    );
 
     const pauseButton = screen.getByRole('button', { name: /pause/i });
     fireEvent.click(pauseButton);
@@ -134,7 +154,7 @@ describe('PLAY-002: Pause playback and maintain playhead position', () => {
     vi.useFakeTimers();
     mockMixer.isPlaying.mockReturnValue(true);
 
-    const { rerender } = render(<PlaybackControls />);
+    const { rerender } = renderWithProvider(<PlaybackControls />);
 
     // Let state sync happen
     await act(async () => {
@@ -142,7 +162,11 @@ describe('PLAY-002: Pause playback and maintain playhead position', () => {
       await Promise.resolve();
     });
 
-    rerender(<PlaybackControls />);
+    rerender(
+      <MetronomeProvider>
+        <PlaybackControls />
+      </MetronomeProvider>
+    );
 
     const pauseButton = screen.getByRole('button', { name: /pause/i });
     mockMixer.isPlaying.mockReturnValue(false);
@@ -153,7 +177,11 @@ describe('PLAY-002: Pause playback and maintain playhead position', () => {
       await Promise.resolve();
     });
 
-    rerender(<PlaybackControls />);
+    rerender(
+      <MetronomeProvider>
+        <PlaybackControls />
+      </MetronomeProvider>
+    );
 
     expect(screen.getByRole('button', { name: /play/i })).toBeInTheDocument();
 
@@ -185,7 +213,7 @@ describe('PLAY-003: Stop playback and reset playhead to 0:00', () => {
 
   // ✅ Happy path
   test('calls mixer.stop() when Stop button clicked', () => {
-    render(<PlaybackControls />);
+    renderWithProvider(<PlaybackControls />);
 
     const stopButton = screen.getByRole('button', { name: /stop/i });
     fireEvent.click(stopButton);
@@ -194,7 +222,7 @@ describe('PLAY-003: Stop playback and reset playhead to 0:00', () => {
   });
 
   test('resets playhead time to 0:00 when stopped', () => {
-    render(<PlaybackControls />);
+    renderWithProvider(<PlaybackControls />);
 
     const stopButton = screen.getByRole('button', { name: /stop/i });
     fireEvent.click(stopButton);
@@ -207,7 +235,7 @@ describe('PLAY-003: Stop playback and reset playhead to 0:00', () => {
     vi.useFakeTimers();
     mockMixer.isPlaying.mockReturnValue(true);
 
-    const { rerender } = render(<PlaybackControls />);
+    const { rerender } = renderWithProvider(<PlaybackControls />);
 
     // Let state sync happen
     await act(async () => {
@@ -215,7 +243,11 @@ describe('PLAY-003: Stop playback and reset playhead to 0:00', () => {
       await Promise.resolve();
     });
 
-    rerender(<PlaybackControls />);
+    rerender(
+      <MetronomeProvider>
+        <PlaybackControls />
+      </MetronomeProvider>
+    );
 
     const stopButton = screen.getByRole('button', { name: /stop/i });
     mockMixer.isPlaying.mockReturnValue(false);
@@ -226,7 +258,11 @@ describe('PLAY-003: Stop playback and reset playhead to 0:00', () => {
       await Promise.resolve();
     });
 
-    rerender(<PlaybackControls />);
+    rerender(
+      <MetronomeProvider>
+        <PlaybackControls />
+      </MetronomeProvider>
+    );
 
     expect(screen.getByRole('button', { name: /play/i })).toBeInTheDocument();
 
@@ -263,7 +299,7 @@ describe('PLAY-004: Update playhead visual in real-time', () => {
   test('updates playhead time while playing', async () => {
     mockMixer.isPlaying.mockReturnValue(false);
 
-    const { rerender } = render(<PlaybackControls />);
+    const { rerender } = renderWithProvider(<PlaybackControls />);
 
     const playButton = screen.getByRole('button', { name: /play/i });
     mockMixer.isPlaying.mockReturnValue(true);
@@ -275,7 +311,11 @@ describe('PLAY-004: Update playhead visual in real-time', () => {
       await Promise.resolve();
     });
 
-    rerender(<PlaybackControls />);
+    rerender(
+      <MetronomeProvider>
+        <PlaybackControls />
+      </MetronomeProvider>
+    );
 
     // Advance time by 1 second (10 interval ticks at 100ms each)
     await act(async () => {
@@ -317,20 +357,20 @@ describe('PLAY-005: Display elapsed time and total duration', () => {
 
   // ✅ Happy path
   test('displays time in M:SS / M:SS format', () => {
-    render(<PlaybackControls totalDuration={125} />);
+    renderWithProvider(<PlaybackControls totalDuration={125} />);
 
     // Should show 0:00 / 2:05
     expect(screen.getByText(/0:00.*2:05/)).toBeInTheDocument();
   });
 
   test('displays 0:00 / 0:00 when no tracks loaded', () => {
-    render(<PlaybackControls />);
+    renderWithProvider(<PlaybackControls />);
 
     expect(screen.getByText(/0:00.*0:00/)).toBeInTheDocument();
   });
 
   test('formats minutes and seconds correctly', () => {
-    render(<PlaybackControls totalDuration={185} />);
+    renderWithProvider(<PlaybackControls totalDuration={185} />);
 
     // Should show 3:05 for 185 seconds
     expect(screen.getByText(/3:05/)).toBeInTheDocument();
@@ -363,7 +403,7 @@ describe('PLAY-006, PLAY-007, PLAY-008: Mixer integration', () => {
 
   // ✅ Happy path
   test('uses mixer for playback which handles mute logic (PLAY-006)', () => {
-    render(<PlaybackControls />);
+    renderWithProvider(<PlaybackControls />);
 
     const playButton = screen.getByRole('button', { name: /play/i });
     fireEvent.click(playButton);
@@ -373,7 +413,7 @@ describe('PLAY-006, PLAY-007, PLAY-008: Mixer integration', () => {
   });
 
   test('uses mixer for playback which handles solo logic (PLAY-007)', () => {
-    render(<PlaybackControls />);
+    renderWithProvider(<PlaybackControls />);
 
     const playButton = screen.getByRole('button', { name: /play/i });
     fireEvent.click(playButton);
@@ -383,7 +423,7 @@ describe('PLAY-006, PLAY-007, PLAY-008: Mixer integration', () => {
   });
 
   test('uses mixer for playback which handles multi-track sync (PLAY-008)', () => {
-    render(<PlaybackControls />);
+    renderWithProvider(<PlaybackControls />);
 
     const playButton = screen.getByRole('button', { name: /play/i });
     fireEvent.click(playButton);
@@ -416,12 +456,12 @@ describe('PlaybackControls: Component lifecycle', () => {
   });
 
   test('creates mixer on mount', () => {
-    render(<PlaybackControls />);
+    renderWithProvider(<PlaybackControls />);
     expect(Mixer).toHaveBeenCalledWith(expect.any(Object));
   });
 
   test('disposes mixer on unmount', () => {
-    const { unmount } = render(<PlaybackControls />);
+    const { unmount } = renderWithProvider(<PlaybackControls />);
     unmount();
     expect(mockMixer.dispose).toHaveBeenCalled();
   });
@@ -431,7 +471,7 @@ describe('PlaybackControls: Component lifecycle', () => {
 
     mockMixer.isPlaying.mockReturnValue(true);
 
-    const { unmount } = render(<PlaybackControls />);
+    const { unmount } = renderWithProvider(<PlaybackControls />);
 
     unmount();
 

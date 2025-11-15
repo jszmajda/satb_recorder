@@ -2,6 +2,7 @@ import { describe, test, expect, beforeEach, vi, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MetronomeControl } from './MetronomeControl';
 import { Metronome } from '../audio/metronome';
+import { MetronomeProvider } from '../contexts/MetronomeContext';
 
 // Mock AudioContext
 const mockAudioContext = {
@@ -12,6 +13,15 @@ global.AudioContext = vi.fn(() => mockAudioContext) as any;
 
 // Mock the Metronome class
 vi.mock('../audio/metronome');
+
+// Helper function to render with MetronomeProvider
+const renderWithProvider = (component: React.ReactElement) => {
+  return render(
+    <MetronomeProvider>
+      {component}
+    </MetronomeProvider>
+  );
+};
 
 describe('MET-003: BPM input field', () => {
   let mockMetronome: any;
@@ -37,7 +47,7 @@ describe('MET-003: BPM input field', () => {
 
   // ✅ Happy path
   test('renders BPM input field with current value', () => {
-    render(<MetronomeControl />);
+    renderWithProvider(<MetronomeControl />);
 
     const input = screen.getByRole('spinbutton', { name: /bpm/i });
     expect(input).toBeInTheDocument();
@@ -45,7 +55,7 @@ describe('MET-003: BPM input field', () => {
   });
 
   test('updates BPM when input value changes', async () => {
-    render(<MetronomeControl />);
+    renderWithProvider(<MetronomeControl />);
 
     const input = screen.getByRole('spinbutton', { name: /bpm/i });
     fireEvent.change(input, { target: { value: '140' } });
@@ -56,7 +66,7 @@ describe('MET-003: BPM input field', () => {
   });
 
   test('accepts valid BPM range (40-240)', async () => {
-    render(<MetronomeControl />);
+    renderWithProvider(<MetronomeControl />);
 
     const input = screen.getByRole('spinbutton', { name: /bpm/i });
 
@@ -73,7 +83,7 @@ describe('MET-003: BPM input field', () => {
 
   // 🔥 Edge cases
   test('clamps BPM to minimum value (40)', async () => {
-    render(<MetronomeControl />);
+    renderWithProvider(<MetronomeControl />);
 
     const input = screen.getByRole('spinbutton', { name: /bpm/i });
     fireEvent.change(input, { target: { value: '30' } });
@@ -86,7 +96,7 @@ describe('MET-003: BPM input field', () => {
   });
 
   test('clamps BPM to maximum value (240)', async () => {
-    render(<MetronomeControl />);
+    renderWithProvider(<MetronomeControl />);
 
     const input = screen.getByRole('spinbutton', { name: /bpm/i });
     fireEvent.change(input, { target: { value: '300' } });
@@ -100,7 +110,7 @@ describe('MET-003: BPM input field', () => {
 
   test('handles invalid input gracefully', async () => {
     mockMetronome.getBpm.mockReturnValue(120);
-    render(<MetronomeControl />);
+    renderWithProvider(<MetronomeControl />);
 
     const input = screen.getByRole('spinbutton', { name: /bpm/i });
     fireEvent.change(input, { target: { value: '' } });
@@ -136,7 +146,7 @@ describe('MET-002: BPM increment/decrement buttons', () => {
 
   // ✅ Happy path
   test('renders increment and decrement buttons', () => {
-    render(<MetronomeControl />);
+    renderWithProvider(<MetronomeControl />);
 
     expect(screen.getByRole('button', { name: /increment|[+]/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /decrement|[-]/i })).toBeInTheDocument();
@@ -144,7 +154,7 @@ describe('MET-002: BPM increment/decrement buttons', () => {
 
   test('increments BPM by 1 on increment button click', async () => {
     mockMetronome.getBpm.mockReturnValue(120);
-    render(<MetronomeControl />);
+    renderWithProvider(<MetronomeControl />);
 
     const incrementButton = screen.getByRole('button', { name: /increment|[+]/i });
     fireEvent.click(incrementButton);
@@ -156,7 +166,7 @@ describe('MET-002: BPM increment/decrement buttons', () => {
 
   test('decrements BPM by 1 on decrement button click', async () => {
     mockMetronome.getBpm.mockReturnValue(120);
-    render(<MetronomeControl />);
+    renderWithProvider(<MetronomeControl />);
 
     const decrementButton = screen.getByRole('button', { name: /decrement|[-]/i });
     fireEvent.click(decrementButton);
@@ -168,7 +178,7 @@ describe('MET-002: BPM increment/decrement buttons', () => {
 
   // 🔥 Edge cases
   test('does not increment beyond maximum BPM (240)', async () => {
-    render(<MetronomeControl />);
+    renderWithProvider(<MetronomeControl />);
 
     const input = screen.getByRole('spinbutton', { name: /bpm/i });
     const incrementButton = screen.getByRole('button', { name: /increment|[+]/i });
@@ -186,7 +196,7 @@ describe('MET-002: BPM increment/decrement buttons', () => {
   });
 
   test('does not decrement below minimum BPM (40)', async () => {
-    render(<MetronomeControl />);
+    renderWithProvider(<MetronomeControl />);
 
     const input = screen.getByRole('spinbutton', { name: /bpm/i });
     const decrementButton = screen.getByRole('button', { name: /decrement|[-]/i });
@@ -204,7 +214,7 @@ describe('MET-002: BPM increment/decrement buttons', () => {
   });
 
   test('increment button disabled at max BPM', () => {
-    render(<MetronomeControl />);
+    renderWithProvider(<MetronomeControl />);
 
     const input = screen.getByRole('spinbutton', { name: /bpm/i });
 
@@ -216,7 +226,7 @@ describe('MET-002: BPM increment/decrement buttons', () => {
   });
 
   test('decrement button disabled at min BPM', () => {
-    render(<MetronomeControl />);
+    renderWithProvider(<MetronomeControl />);
 
     const input = screen.getByRole('spinbutton', { name: /bpm/i });
 
@@ -252,96 +262,67 @@ describe('MET-005: Visual flash indicator', () => {
 
   // ✅ Happy path
   test('renders visual flash indicator box', () => {
-    render(<MetronomeControl />);
+    renderWithProvider(<MetronomeControl />);
 
     const flashBox = screen.getByTestId('metronome-flash');
     expect(flashBox).toBeInTheDocument();
   });
 
   test('registers visual callback on mount', () => {
-    render(<MetronomeControl />);
+    renderWithProvider(<MetronomeControl />);
 
     expect(mockMetronome.setVisualCallback).toHaveBeenCalledWith(expect.any(Function));
   });
 
   test('flash box lights up when callback triggered', async () => {
-    let visualCallback: ((beatNumber: number) => void) | null = null;
+    let visualCallback: (() => void) | null = null;
     mockMetronome.setVisualCallback.mockImplementation((cb: any) => {
       visualCallback = cb;
     });
 
-    render(<MetronomeControl />);
+    renderWithProvider(<MetronomeControl />);
 
     const flashBox = screen.getByTestId('metronome-flash');
 
     // Initially not flashing
-    expect(flashBox).not.toHaveClass('flash-active');
+    expect(flashBox).toHaveAttribute('data-flashing', 'false');
 
     // Trigger beat
     if (visualCallback) {
-      visualCallback(1);
+      visualCallback();
     }
 
     await waitFor(() => {
-      expect(flashBox).toHaveClass('flash-active');
+      // Should be flashing
+      expect(flashBox).toHaveAttribute('data-flashing', 'true');
     });
   });
 
   test('flash deactivates after brief duration', async () => {
-    let visualCallback: ((beatNumber: number) => void) | null = null;
+    let visualCallback: (() => void) | null = null;
     mockMetronome.setVisualCallback.mockImplementation((cb: any) => {
       visualCallback = cb;
     });
 
-    render(<MetronomeControl />);
+    renderWithProvider(<MetronomeControl />);
 
     const flashBox = screen.getByTestId('metronome-flash');
 
     // Trigger beat
     if (visualCallback) {
-      visualCallback(1);
+      visualCallback();
     }
 
     await waitFor(() => {
-      expect(flashBox).toHaveClass('flash-active');
+      // Should be flashing
+      expect(flashBox).toHaveAttribute('data-flashing', 'true');
     });
 
     // Wait for flash to deactivate (100ms + buffer)
     await new Promise(resolve => setTimeout(resolve, 150));
 
-    expect(flashBox).not.toHaveClass('flash-active');
-  });
-
-  test('flash highlights beat 1 differently', async () => {
-    let visualCallback: ((beatNumber: number) => void) | null = null;
-    mockMetronome.setVisualCallback.mockImplementation((cb: any) => {
-      visualCallback = cb;
-    });
-
-    render(<MetronomeControl />);
-
-    const flashBox = screen.getByTestId('metronome-flash');
-
-    // Trigger beat 1
-    if (visualCallback) {
-      visualCallback(1);
-    }
-
-    await waitFor(() => {
-      expect(flashBox).toHaveClass('beat-one');
-    });
-
-    // Wait for flash to clear
-    await new Promise(resolve => setTimeout(resolve, 150));
-
-    // Trigger beat 2
-    if (visualCallback) {
-      visualCallback(2);
-    }
-
-    await waitFor(() => {
-      expect(flashBox).not.toHaveClass('beat-one');
-    });
+    // Should return to not flashing
+    expect(flashBox).toHaveAttribute('data-flashing', 'false');
   });
 });
 
@@ -369,33 +350,44 @@ describe('OVER-001: Overdub toggle', () => {
 
   // ✅ Happy path
   test('renders overdub toggle switch', () => {
-    render(<MetronomeControl />);
+    renderWithProvider(<MetronomeControl />);
 
     const toggle = screen.getByRole('checkbox', { name: /overdub/i });
     expect(toggle).toBeInTheDocument();
   });
 
   test('overdub toggle defaults to off', () => {
-    render(<MetronomeControl />);
+    renderWithProvider(<MetronomeControl />);
 
     const toggle = screen.getByRole('checkbox', { name: /overdub/i });
     expect(toggle).not.toBeChecked();
   });
 
-  test('toggles overdub state on click', () => {
-    render(<MetronomeControl />);
+  test('toggles overdub state on click', async () => {
+    // Create a project first so setOverdubEnabled doesn't throw
+    const { useProjectStore } = await import('../store/useProjectStore');
+    await useProjectStore.getState().createProject('Test Project');
+
+    renderWithProvider(<MetronomeControl />);
 
     const toggle = screen.getByRole('checkbox', { name: /overdub/i });
 
     fireEvent.click(toggle);
-    expect(toggle).toBeChecked();
+
+    // Wait for async state update
+    await waitFor(() => {
+      expect(toggle).toBeChecked();
+    });
 
     fireEvent.click(toggle);
-    expect(toggle).not.toBeChecked();
+
+    await waitFor(() => {
+      expect(toggle).not.toBeChecked();
+    });
   });
 
   test('displays overdub label', () => {
-    render(<MetronomeControl />);
+    renderWithProvider(<MetronomeControl />);
 
     expect(screen.getByText(/overdub/i)).toBeInTheDocument();
   });
@@ -424,17 +416,19 @@ describe('MetronomeControl: Component lifecycle', () => {
     vi.clearAllMocks();
   });
 
-  test('creates Metronome instance on mount', () => {
-    render(<MetronomeControl />);
+  test('gets shared Metronome instance on mount', () => {
+    renderWithProvider(<MetronomeControl />);
 
+    // Metronome is created by the MetronomeProvider context
     expect(Metronome).toHaveBeenCalledWith(120); // Initial BPM = 120
   });
 
   test('disposes metronome on unmount', () => {
-    const { unmount } = render(<MetronomeControl />);
+    const { unmount } = renderWithProvider(<MetronomeControl />);
 
     unmount();
 
-    expect(mockMetronome.dispose).toHaveBeenCalled();
+    // Shared metronome should NOT be disposed by individual components
+    expect(mockMetronome.dispose).not.toHaveBeenCalled();
   });
 });

@@ -3,12 +3,12 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Recorder } from '../audio/recorder';
-import { Metronome } from '../audio/metronome';
 import { VUMeter as VUMeterClass } from '../audio/vuMeter';
 import { VUMeter } from './VUMeter';
 import { Mixer } from '../audio/mixer';
 import { useErrorStore } from '../store/useErrorStore';
 import { useMicrophoneStore } from '../store/useMicrophoneStore';
+import { useMetronome } from '../contexts/MetronomeContext';
 
 export interface RecordButtonTrack {
   id: string;
@@ -52,8 +52,10 @@ export function RecordButton({
   // [EARS: MIC-003] Use selected device for recording
   const selectedDeviceId = useMicrophoneStore((state) => state.selectedDeviceId);
 
+  // Get shared metronome instance from context
+  const { getMetronome } = useMetronome();
+
   const recorderRef = useRef<Recorder | null>(null);
-  const metronomeRef = useRef<Metronome | null>(null);
   const vuMeterRef = useRef<VUMeterClass | null>(null);
   const mixerRef = useRef<Mixer | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -67,7 +69,6 @@ export function RecordButton({
   useEffect(() => {
     audioContextRef.current = new AudioContext();
     recorderRef.current = new Recorder();
-    metronomeRef.current = new Metronome(bpm);
     vuMeterRef.current = new VUMeterClass(audioContextRef.current);
     mixerRef.current = new Mixer(audioContextRef.current);
 
@@ -84,10 +85,6 @@ export function RecordButton({
       if (mixerRef.current) {
         mixerRef.current.dispose();
       }
-      if (metronomeRef.current) {
-        metronomeRef.current.stop();
-        metronomeRef.current.dispose();
-      }
       if (recorderRef.current) {
         recorderRef.current.dispose();
       }
@@ -95,7 +92,7 @@ export function RecordButton({
         audioContextRef.current.close();
       }
     };
-  }, [bpm]);
+  }, []);
 
   /**
    * Handle record button click
@@ -138,6 +135,12 @@ export function RecordButton({
     let count = COUNTDOWN_DURATION;
     setCountdownValue(count);
 
+    // Start metronome during countdown so user can feel the tempo
+    const metronome = getMetronome();
+    if (metronome) {
+      metronome.start();
+    }
+
     countdownIntervalRef.current = window.setInterval(() => {
       count--;
       if (count > 0) {
@@ -163,15 +166,21 @@ export function RecordButton({
     setRecordingState('recording');
 
     // [EARS: REC-004] Connect VU meter to stream
-    if (vuMeterRef.current) {
+    if (vuMeterRef.current && audioContextRef.current) {
+      // Resume AudioContext before connecting analyser (required in modern browsers)
+      if (audioContextRef.current.state === 'suspended') {
+        await audioContextRef.current.resume();
+      }
+
       vuMeterRef.current.connect(streamRef.current);
 
-      // Update VU meter level periodically
+      // Update VU meter level periodically using setInterval
+      // Use 50ms (20fps) to balance smoothness with performance
       vuIntervalRef.current = window.setInterval(() => {
         if (vuMeterRef.current) {
           setVuLevel(vuMeterRef.current.getVolume());
         }
-      }, 50); // Update 20 times per second
+      }, 50);
     }
 
     // [EARS: REC-005, OVER-002] If overdub enabled, load and play existing tracks
@@ -196,10 +205,7 @@ export function RecordButton({
     // [EARS: REC-003] Start MediaRecorder
     await recorderRef.current.startRecording(streamRef.current);
 
-    // [EARS: REC-003] Start metronome
-    if (metronomeRef.current) {
-      metronomeRef.current.start();
-    }
+    // Note: Metronome already started during countdown (see startCountdown())
   };
 
   /**
@@ -227,8 +233,9 @@ export function RecordButton({
     }
 
     // Stop metronome
-    if (metronomeRef.current) {
-      metronomeRef.current.stop();
+    const metronome = getMetronome();
+    if (metronome) {
+      metronome.stop();
     }
 
     try {

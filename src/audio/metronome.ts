@@ -22,6 +22,7 @@ export class Metronome {
   private playing: boolean = false;
   private visualCallback: (() => void) | null = null;
   private scheduleId: number | null = null;
+  private visualIntervalId: number | null = null;
 
   /**
    * Create a new Metronome
@@ -50,6 +51,12 @@ export class Metronome {
   setBpm(bpm: number): void {
     this.bpm = clampBpm(bpm);
     Tone.getTransport().bpm.value = this.bpm;
+
+    // If playing, restart the visual interval with new BPM
+    if (this.playing && this.visualCallback) {
+      this.stopVisualInterval();
+      this.startVisualInterval();
+    }
   }
 
   /**
@@ -86,6 +93,35 @@ export class Metronome {
   }
 
   /**
+   * Start visual interval for metronome flasher
+   */
+  private startVisualInterval(): void {
+    if (this.visualIntervalId !== null) {
+      return;
+    }
+
+    // Calculate interval from BPM (beats per minute -> milliseconds per beat)
+    const intervalMs = 60000 / this.bpm;
+
+    // Use setInterval for simple, reliable visual timing
+    this.visualIntervalId = window.setInterval(() => {
+      if (this.visualCallback) {
+        this.visualCallback();
+      }
+    }, intervalMs);
+  }
+
+  /**
+   * Stop visual interval
+   */
+  private stopVisualInterval(): void {
+    if (this.visualIntervalId !== null) {
+      clearInterval(this.visualIntervalId);
+      this.visualIntervalId = null;
+    }
+  }
+
+  /**
    * Start metronome
    * [EARS: MET-006, MET-007] Sync during recording and playback
    */
@@ -96,17 +132,16 @@ export class Metronome {
 
     this.playing = true;
 
-    // Schedule the visual callback to fire on every quarter note
-    this.scheduleId = Tone.getTransport().scheduleRepeat((time) => {
-      if (this.visualCallback) {
-        // Use Draw to sync with animation frame
-        Tone.Draw.schedule(() => {
-          this.visualCallback?.();
-        }, time);
-      }
-    }, '4n'); // Every quarter note (one beat)
+    // Reset transport position to ensure consistent timing
+    Tone.getTransport().position = 0;
 
+    // Start Tone.Transport for future audio features (click track, etc.)
     Tone.getTransport().start();
+
+    // Start visual callback interval (independent of Transport)
+    if (this.visualCallback) {
+      this.startVisualInterval();
+    }
   }
 
   /**
@@ -119,12 +154,17 @@ export class Metronome {
 
     this.playing = false;
 
+    // Stop visual interval
+    this.stopVisualInterval();
+
     if (this.scheduleId !== null) {
       Tone.getTransport().clear(this.scheduleId);
       this.scheduleId = null;
     }
 
     Tone.getTransport().stop();
+    // Reset position for next start
+    Tone.getTransport().position = 0;
   }
 
   /**
@@ -132,6 +172,7 @@ export class Metronome {
    */
   dispose(): void {
     this.stop();
+    this.stopVisualInterval();
     this.visualCallback = null;
   }
 }

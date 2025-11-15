@@ -4,6 +4,7 @@ import { Waveform } from './Waveform';
 import { PlaybackControls } from './PlaybackControls';
 import { Mixer } from '../audio/mixer';
 import React, { useState, useRef, useEffect } from 'react';
+import { MetronomeProvider } from '../contexts/MetronomeContext';
 
 // Mock AudioContext
 const mockAudioContext = {
@@ -17,6 +18,17 @@ global.AudioContext = vi.fn(() => mockAudioContext) as any;
 
 // Mock Mixer class
 vi.mock('../audio/mixer');
+// Mock Metronome class
+vi.mock('../audio/metronome');
+
+// Helper function to render with MetronomeProvider
+const renderWithProvider = (component: React.ReactElement) => {
+  return render(
+    <MetronomeProvider>
+      {component}
+    </MetronomeProvider>
+  );
+};
 
 /**
  * Integration component that connects Waveform seeking with PlaybackControls
@@ -123,7 +135,7 @@ describe('SEEK-001: Click on sparkline moves playhead to that position', () => {
     const audioData = new Array(400).fill(0).map((_, i) => Math.sin(i / 10) * 0.5);
     const totalDuration = 10; // 10 seconds
 
-    render(
+    renderWithProvider(
       <SeekingIntegration audioData={audioData} totalDuration={totalDuration} />
     );
 
@@ -150,7 +162,7 @@ describe('SEEK-001: Click on sparkline moves playhead to that position', () => {
     const audioData = new Array(400).fill(0).map((_, i) => Math.sin(i / 10) * 0.5);
     const totalDuration = 10;
 
-    render(
+    renderWithProvider(
       <SeekingIntegration audioData={audioData} totalDuration={totalDuration} />
     );
 
@@ -170,7 +182,7 @@ describe('SEEK-001: Click on sparkline moves playhead to that position', () => {
     const audioData = new Array(400).fill(0).map((_, i) => Math.sin(i / 10) * 0.5);
     const totalDuration = 10;
 
-    render(
+    renderWithProvider(
       <SeekingIntegration audioData={audioData} totalDuration={totalDuration} />
     );
 
@@ -190,7 +202,7 @@ describe('SEEK-001: Click on sparkline moves playhead to that position', () => {
     const audioData = new Array(400).fill(0).map((_, i) => Math.sin(i / 10) * 0.5);
     const totalDuration = 10;
 
-    render(
+    renderWithProvider(
       <SeekingIntegration audioData={audioData} totalDuration={totalDuration} />
     );
 
@@ -240,7 +252,7 @@ describe('SEEK-002: Drag playhead updates position in real-time', () => {
     const audioData = new Array(400).fill(0).map((_, i) => Math.sin(i / 10) * 0.5);
     const totalDuration = 10;
 
-    render(
+    renderWithProvider(
       <SeekingIntegration audioData={audioData} totalDuration={totalDuration} />
     );
 
@@ -275,7 +287,7 @@ describe('SEEK-002: Drag playhead updates position in real-time', () => {
     const audioData = new Array(400).fill(0).map((_, i) => Math.sin(i / 10) * 0.5);
     const totalDuration = 10;
 
-    render(
+    renderWithProvider(
       <SeekingIntegration audioData={audioData} totalDuration={totalDuration} />
     );
 
@@ -304,7 +316,7 @@ describe('SEEK-002: Drag playhead updates position in real-time', () => {
     const audioData = new Array(400).fill(0).map((_, i) => Math.sin(i / 10) * 0.5);
     const totalDuration = 10;
 
-    render(
+    renderWithProvider(
       <SeekingIntegration audioData={audioData} totalDuration={totalDuration} />
     );
 
@@ -333,7 +345,7 @@ describe('SEEK-002: Drag playhead updates position in real-time', () => {
     const audioData = new Array(400).fill(0).map((_, i) => Math.sin(i / 10) * 0.5);
     const totalDuration = 10;
 
-    render(
+    renderWithProvider(
       <SeekingIntegration audioData={audioData} totalDuration={totalDuration} />
     );
 
@@ -389,7 +401,7 @@ describe('SEEK-003: Continue playing from new position if playback active during
     const audioData = new Array(400).fill(0).map((_, i) => Math.sin(i / 10) * 0.5);
     const totalDuration = 10;
 
-    const { rerender } = render(
+    const { rerender } = renderWithProvider(
       <SeekingIntegration audioData={audioData} totalDuration={totalDuration} />
     );
 
@@ -404,7 +416,9 @@ describe('SEEK-003: Continue playing from new position if playback active during
     });
 
     rerender(
-      <SeekingIntegration audioData={audioData} totalDuration={totalDuration} />
+      <MetronomeProvider>
+        <SeekingIntegration audioData={audioData} totalDuration={totalDuration} />
+      </MetronomeProvider>
     );
 
     // Seek while playing
@@ -428,7 +442,7 @@ describe('SEEK-003: Continue playing from new position if playback active during
     const audioData = new Array(400).fill(0).map((_, i) => Math.sin(i / 10) * 0.5);
     const totalDuration = 10;
 
-    const { rerender } = render(
+    const { rerender } = renderWithProvider(
       <SeekingIntegration audioData={audioData} totalDuration={totalDuration} />
     );
 
@@ -443,7 +457,9 @@ describe('SEEK-003: Continue playing from new position if playback active during
     });
 
     rerender(
-      <SeekingIntegration audioData={audioData} totalDuration={totalDuration} />
+      <MetronomeProvider>
+        <SeekingIntegration audioData={audioData} totalDuration={totalDuration} />
+      </MetronomeProvider>
     );
 
     // Let playback run for 2 seconds
@@ -472,7 +488,7 @@ describe('SEEK-003: Continue playing from new position if playback active during
     const audioData = new Array(400).fill(0).map((_, i) => Math.sin(i / 10) * 0.5);
     const totalDuration = 10;
 
-    render(
+    renderWithProvider(
       <SeekingIntegration audioData={audioData} totalDuration={totalDuration} />
     );
 
@@ -493,7 +509,7 @@ describe('SEEK-003: Continue playing from new position if playback active during
     const audioData = new Array(400).fill(0).map((_, i) => Math.sin(i / 10) * 0.5);
     const totalDuration = 10;
 
-    const { rerender } = render(
+    const { rerender } = renderWithProvider(
       <SeekingIntegration audioData={audioData} totalDuration={totalDuration} />
     );
 
@@ -508,7 +524,9 @@ describe('SEEK-003: Continue playing from new position if playback active during
     });
 
     rerender(
-      <SeekingIntegration audioData={audioData} totalDuration={totalDuration} />
+      <MetronomeProvider>
+        <SeekingIntegration audioData={audioData} totalDuration={totalDuration} />
+      </MetronomeProvider>
     );
 
     // Drag to new position
@@ -560,7 +578,7 @@ describe('Seeking Integration: Component lifecycle', () => {
   test('disposes mixer on unmount', () => {
     const audioData = new Array(400).fill(0).map((_, i) => Math.sin(i / 10) * 0.5);
 
-    const { unmount } = render(
+    const { unmount } = renderWithProvider(
       <SeekingIntegration audioData={audioData} totalDuration={10} />
     );
 
@@ -572,7 +590,7 @@ describe('Seeking Integration: Component lifecycle', () => {
   test('handles rapid seeking without errors', () => {
     const audioData = new Array(400).fill(0).map((_, i) => Math.sin(i / 10) * 0.5);
 
-    render(
+    renderWithProvider(
       <SeekingIntegration audioData={audioData} totalDuration={10} />
     );
 

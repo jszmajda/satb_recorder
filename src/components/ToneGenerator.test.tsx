@@ -51,12 +51,6 @@ describe('TONE-003, TONE-006: Tone generator UI', () => {
 
     expect(toneLabels).toEqual(['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']);
   });
-
-  test('displays tone generator label', () => {
-    render(<ToneGeneratorComponent />);
-
-    expect(screen.getByText(/reference tones/i)).toBeInTheDocument();
-  });
 });
 
 describe('TONE-004: Play tone on button press', () => {

@@ -89,62 +89,49 @@ export function ToneGenerator() {
     <div
       className="tone-generator"
       style={{
-        padding: '1rem',
-        backgroundColor: '#2c2c2c',
-        border: '1px solid #444',
-        borderRadius: '8px',
+        display: 'flex',
+        gap: '0.3rem',
+        flexWrap: 'wrap',
       }}
     >
-      <h3 style={{ margin: '0 0 1rem 0', color: '#fff', fontSize: '0.9rem' }}>
-        Reference Tones
-      </h3>
-
       {/* Tone Buttons */}
       {/* [EARS: TONE-003, TONE-006] 12 tone buttons in chromatic order */}
-      <div
-        style={{
-          display: 'flex',
-          gap: '0.5rem',
-          flexWrap: 'wrap',
-        }}
-      >
-        {TONES.map((tone) => (
-          <button
-            key={tone.note}
-            onClick={() => handleToneClick(tone.note)}
-            className={activeTone === tone.note ? 'active' : ''}
-            aria-label={tone.label}
-            style={{
-              padding: '0.75rem 1rem',
-              backgroundColor: activeTone === tone.note
-                ? (tone.isBlackKey ? '#ffeb3b' : '#4caf50')
-                : (tone.isBlackKey ? '#333' : '#555'),
-              color: activeTone === tone.note
-                ? '#000'
-                : '#fff',
-              border: tone.isBlackKey ? '1px solid #666' : '1px solid #777',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontWeight: 'bold',
-              fontSize: '0.9rem',
-              minWidth: '50px',
-              transition: 'all 0.15s ease',
-            }}
-            onMouseEnter={(e) => {
-              if (activeTone !== tone.note) {
-                e.currentTarget.style.backgroundColor = tone.isBlackKey ? '#444' : '#666';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (activeTone !== tone.note) {
-                e.currentTarget.style.backgroundColor = tone.isBlackKey ? '#333' : '#555';
-              }
-            }}
-          >
-            {tone.label}
-          </button>
-        ))}
-      </div>
+      {TONES.map((tone) => (
+        <button
+          key={tone.note}
+          onClick={() => handleToneClick(tone.note)}
+          className={activeTone === tone.note ? 'active' : ''}
+          aria-label={tone.label}
+          style={{
+            padding: '0.3rem 0.5rem',
+            backgroundColor: activeTone === tone.note
+              ? (tone.isBlackKey ? '#ffeb3b' : '#4caf50')
+              : (tone.isBlackKey ? '#333' : '#555'),
+            color: activeTone === tone.note
+              ? '#000'
+              : '#fff',
+            border: tone.isBlackKey ? '1px solid #666' : '1px solid #777',
+            borderRadius: '3px',
+            cursor: 'pointer',
+            fontWeight: 'bold',
+            fontSize: '0.7rem',
+            minWidth: '32px',
+            transition: 'all 0.15s ease',
+          }}
+          onMouseEnter={(e) => {
+            if (activeTone !== tone.note) {
+              e.currentTarget.style.backgroundColor = tone.isBlackKey ? '#444' : '#666';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (activeTone !== tone.note) {
+              e.currentTarget.style.backgroundColor = tone.isBlackKey ? '#333' : '#555';
+            }
+          }}
+        >
+          {tone.label}
+        </button>
+      ))}
     </div>
   );
 }

@@ -64,9 +64,9 @@ export function VoicePartSection({
       style={{
         backgroundColor: '#2c2c2c',
         border: '1px solid #444',
-        borderLeft: `4px solid ${getColorValue(color)}`,
-        borderRadius: '4px',
-        marginBottom: '1rem',
+        borderLeft: `3px solid ${getColorValue(color)}`,
+        borderRadius: '3px',
+        marginBottom: '0.5rem',
       }}
     >
       {/* Header */}
@@ -75,8 +75,8 @@ export function VoicePartSection({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '1rem',
-          gap: '1rem',
+          padding: '0.4rem 0.5rem',
+          gap: '0.5rem',
         }}
       >
         {/* Left side: Toggle and name */}
@@ -84,7 +84,7 @@ export function VoicePartSection({
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '0.75rem',
+            gap: '0.4rem',
           }}
         >
           {/* Collapse/Expand Toggle */}
@@ -93,12 +93,12 @@ export function VoicePartSection({
             onClick={handleToggleExpand}
             aria-label={isExpanded ? 'Collapse' : 'Expand'}
             style={{
-              padding: '0.5rem',
+              padding: '0.2rem',
               backgroundColor: 'transparent',
               color: '#fff',
               border: 'none',
               cursor: 'pointer',
-              fontSize: '1rem',
+              fontSize: '0.75rem',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -111,7 +111,7 @@ export function VoicePartSection({
           <h3
             style={{
               margin: 0,
-              fontSize: '1.25rem',
+              fontSize: '0.9rem',
               fontWeight: 'bold',
               color: '#fff',
             }}
@@ -123,7 +123,7 @@ export function VoicePartSection({
           {/* [EARS: VOICE-003] Display track count */}
           <span
             style={{
-              fontSize: '0.875rem',
+              fontSize: '0.7rem',
               color: '#999',
             }}
           >
@@ -137,14 +137,14 @@ export function VoicePartSection({
           onClick={handleAddTrack}
           aria-label="Add Track"
           style={{
-            padding: '0.5rem 1rem',
+            padding: '0.3rem 0.6rem',
             backgroundColor: getColorValue(color),
             color: '#fff',
             border: 'none',
-            borderRadius: '4px',
+            borderRadius: '3px',
             cursor: 'pointer',
             fontWeight: 'bold',
-            fontSize: '1.25rem',
+            fontSize: '0.9rem',
             transition: 'all 0.15s ease',
           }}
           onMouseEnter={(e) => {
@@ -162,7 +162,7 @@ export function VoicePartSection({
       {isExpanded && children && (
         <div
           style={{
-            padding: '0 1rem 1rem 1rem',
+            padding: '0 0.5rem 0.5rem 0.5rem',
           }}
         >
           {children}

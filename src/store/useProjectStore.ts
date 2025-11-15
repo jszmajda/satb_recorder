@@ -55,6 +55,19 @@ const getTracksFromProject = (project: Project | null): Track[] => {
 };
 
 /**
+ * Helper: Update URL to reflect current project
+ */
+const updateProjectUrl = (projectId: string | null) => {
+  const url = new URL(window.location.href);
+  if (projectId) {
+    url.searchParams.set('project', projectId);
+  } else {
+    url.searchParams.delete('project');
+  }
+  window.history.replaceState({}, '', url.toString());
+};
+
+/**
  * Main project store with auto-save to IndexedDB
  * [EARS: PROJ-001 through PROJ-009, REC-010, TRACK-001 through TRACK-010]
  */
@@ -89,6 +102,9 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
       tracks: getTracksFromProject(project),
       hasUnsavedChanges: false,
     });
+
+    // Update URL to reflect current project
+    updateProjectUrl(project.id);
   },
 
   /**
@@ -108,6 +124,9 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
       tracks: getTracksFromProject(project),
       hasUnsavedChanges: false,
     });
+
+    // Update URL to reflect current project
+    updateProjectUrl(project.id);
   },
 
   /**
@@ -136,6 +155,9 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
       tracks: [],
       hasUnsavedChanges: false,
     });
+
+    // Clear project from URL
+    updateProjectUrl(null);
   },
 
   /**

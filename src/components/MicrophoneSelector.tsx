@@ -77,12 +77,12 @@ export function MicrophoneSelector() {
 
     if (deviceId === '') {
       // Clear selection
-      recorderRef.current.selectDevice(null);
+      recorderRef.current.setSelectedDevice(null);
       setSelectedDeviceId(null);
     } else {
       // Select device (pass the ID as-is, even if it doesn't exist in the list)
       // The Recorder class will handle invalid IDs
-      recorderRef.current.selectDevice(deviceId);
+      recorderRef.current.setSelectedDevice(deviceId);
       setSelectedDeviceId(deviceId);
     }
   };

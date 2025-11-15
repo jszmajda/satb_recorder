@@ -27,7 +27,7 @@ describe('MIC-002: Device enumeration display', () => {
         { deviceId: 'mic-3', label: 'Bluetooth Headset' },
       ]),
       getSelectedDeviceId: vi.fn().mockReturnValue(null),
-      selectDevice: vi.fn(),
+      setSelectedDevice: vi.fn(),
       requestPermission: vi.fn(),
       dispose: vi.fn(),
     };
@@ -134,7 +134,7 @@ describe('MIC-003: Device selection', () => {
         { deviceId: 'mic-2', label: 'USB Microphone' },
       ]),
       getSelectedDeviceId: vi.fn().mockReturnValue(null),
-      selectDevice: vi.fn(),
+      setSelectedDevice: vi.fn(),
       requestPermission: vi.fn(),
       dispose: vi.fn(),
     };
@@ -148,7 +148,7 @@ describe('MIC-003: Device selection', () => {
   });
 
   // ✅ Happy path
-  test('calls selectDevice when device is chosen', async () => {
+  test('calls setSelectedDevice when device is chosen', async () => {
     render(<MicrophoneSelector />);
 
     await waitFor(() => {
@@ -158,7 +158,7 @@ describe('MIC-003: Device selection', () => {
     const select = screen.getByRole('combobox', { name: /microphone/i });
     fireEvent.change(select, { target: { value: 'mic-1' } });
 
-    expect(mockRecorder.selectDevice).toHaveBeenCalledWith('mic-1');
+    expect(mockRecorder.setSelectedDevice).toHaveBeenCalledWith('mic-1');
   });
 
   test('displays selected device', async () => {
@@ -183,11 +183,11 @@ describe('MIC-003: Device selection', () => {
 
     // Select first device
     fireEvent.change(select, { target: { value: 'mic-1' } });
-    expect(mockRecorder.selectDevice).toHaveBeenCalledWith('mic-1');
+    expect(mockRecorder.setSelectedDevice).toHaveBeenCalledWith('mic-1');
 
     // Select second device
     fireEvent.change(select, { target: { value: 'mic-2' } });
-    expect(mockRecorder.selectDevice).toHaveBeenCalledWith('mic-2');
+    expect(mockRecorder.setSelectedDevice).toHaveBeenCalledWith('mic-2');
   });
 
   test('clears selection when placeholder selected', async () => {
@@ -204,7 +204,7 @@ describe('MIC-003: Device selection', () => {
 
     // Select placeholder (empty value)
     fireEvent.change(select, { target: { value: '' } });
-    expect(mockRecorder.selectDevice).toHaveBeenCalledWith(null);
+    expect(mockRecorder.setSelectedDevice).toHaveBeenCalledWith(null);
   });
 
 });
@@ -218,7 +218,7 @@ describe('MIC-002: Refresh devices', () => {
         { deviceId: 'mic-1', label: 'Built-in Microphone' },
       ]),
       getSelectedDeviceId: vi.fn().mockReturnValue(null),
-      selectDevice: vi.fn(),
+      setSelectedDevice: vi.fn(),
       requestPermission: vi.fn(),
       dispose: vi.fn(),
     };
@@ -286,7 +286,7 @@ describe('MicrophoneSelector: Component lifecycle', () => {
     mockRecorder = {
       enumerateDevices: vi.fn().mockResolvedValue([]),
       getSelectedDeviceId: vi.fn().mockReturnValue(null),
-      selectDevice: vi.fn(),
+      setSelectedDevice: vi.fn(),
       requestPermission: vi.fn(),
       dispose: vi.fn(),
     };

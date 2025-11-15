@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Recorder } from '../audio/recorder';
+import { useMicrophoneStore } from '../store/useMicrophoneStore';
 
 interface MicrophoneDevice {
   deviceId: string;
@@ -10,9 +11,12 @@ interface MicrophoneDevice {
 
 export function MicrophoneSelector() {
   const [devices, setDevices] = useState<MicrophoneDevice[]>([]);
-  const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Global microphone selection state (shared with RecordButton)
+  const selectedDeviceId = useMicrophoneStore((state) => state.selectedDeviceId);
+  const setSelectedDeviceId = useMicrophoneStore((state) => state.setSelectedDeviceId);
 
   const recorderRef = useRef<Recorder | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -97,12 +101,11 @@ export function MicrophoneSelector() {
     if (!recorderRef.current) return;
 
     if (deviceId === '') {
-      // Clear selection
+      // Clear selection (update both local recorder and global store)
       recorderRef.current.setSelectedDevice(null);
       setSelectedDeviceId(null);
     } else {
-      // Select device (pass the ID as-is, even if it doesn't exist in the list)
-      // The Recorder class will handle invalid IDs
+      // Select device (update both local recorder and global store)
       recorderRef.current.setSelectedDevice(deviceId);
       setSelectedDeviceId(deviceId);
     }

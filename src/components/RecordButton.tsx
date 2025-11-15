@@ -7,6 +7,7 @@ import { Metronome } from '../audio/metronome';
 import { VUMeter as VUMeterClass } from '../audio/vuMeter';
 import { VUMeter } from './VUMeter';
 import { useErrorStore } from '../store/useErrorStore';
+import { useMicrophoneStore } from '../store/useMicrophoneStore';
 
 export interface RecordButtonProps {
   voicePartId: string;
@@ -34,6 +35,10 @@ export function RecordButton({
   // Global error handling [EARS: ERR-001, ERR-003]
   const setError = useErrorStore((state) => state.setError);
 
+  // Global microphone selection (shared with MicrophoneSelector)
+  // [EARS: MIC-003] Use selected device for recording
+  const selectedDeviceId = useMicrophoneStore((state) => state.selectedDeviceId);
+
   const recorderRef = useRef<Recorder | null>(null);
   const metronomeRef = useRef<Metronome | null>(null);
   const vuMeterRef = useRef<VUMeterClass | null>(null);
@@ -47,7 +52,7 @@ export function RecordButton({
    */
   useEffect(() => {
     audioContextRef.current = new AudioContext();
-    recorderRef.current = new Recorder(audioContextRef.current);
+    recorderRef.current = new Recorder();
     metronomeRef.current = new Metronome(bpm);
     vuMeterRef.current = new VUMeterClass(audioContextRef.current);
 
@@ -77,13 +82,20 @@ export function RecordButton({
   /**
    * Handle record button click
    * [EARS: REC-001] Request microphone permission
+   * [EARS: MIC-003] Use selected device for recording
    */
   const handleRecordClick = async () => {
     setRecordingState('requesting-permission');
     setError(null); // Clear any previous errors
 
     try {
-      // Request microphone permission
+      // Set selected device on recorder before requesting access
+      // This ensures we use the device selected in MicrophoneSelector
+      if (recorderRef.current) {
+        recorderRef.current.setSelectedDevice(selectedDeviceId);
+      }
+
+      // Request microphone permission with selected device
       const stream = await recorderRef.current!.requestMicrophoneAccess();
       streamRef.current = stream;
 

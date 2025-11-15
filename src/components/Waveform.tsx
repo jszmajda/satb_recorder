@@ -7,6 +7,7 @@ export interface WaveformProps {
   data?: number[];
   currentTime?: number;
   duration?: number;
+  trackDuration?: number; // Actual duration of this track (for scaling)
   onSeek?: (time: number) => void;
   isPlaying?: boolean;
   width?: number;
@@ -27,6 +28,7 @@ export function Waveform({
   data: waveformData = [],
   currentTime = 0,
   duration = 0,
+  trackDuration,
   onSeek,
   isPlaying = false,
   width = DEFAULT_WIDTH,
@@ -55,6 +57,11 @@ export function Waveform({
       return;
     }
 
+    // Calculate waveform width based on track duration vs display duration
+    // If trackDuration is provided and less than duration, scale the waveform
+    const actualDuration = trackDuration || duration;
+    const waveformWidth = duration > 0 ? (actualDuration / duration) * width : width;
+
     // Draw waveform
     ctx.strokeStyle = WAVEFORM_COLOR;
     ctx.lineWidth = 1;
@@ -63,9 +70,9 @@ export function Waveform({
     const centerY = height / 2;
     const amplitudeScale = (height / 2) * 0.9; // 90% of half height
 
-    // Draw each data point
+    // Draw each data point, scaled to waveformWidth
     waveformData.forEach((amplitude, index) => {
-      const x = (index / (waveformData.length - 1 || 1)) * width;
+      const x = (index / (waveformData.length - 1 || 1)) * waveformWidth;
       const y = centerY - amplitude * amplitudeScale;
 
       if (index === 0) {
@@ -78,7 +85,7 @@ export function Waveform({
     // Draw mirror for symmetrical waveform
     for (let i = waveformData.length - 1; i >= 0; i--) {
       const amplitude = waveformData[i];
-      const x = (i / (waveformData.length - 1 || 1)) * width;
+      const x = (i / (waveformData.length - 1 || 1)) * waveformWidth;
       const y = centerY + amplitude * amplitudeScale;
       ctx.lineTo(x, y);
     }
@@ -87,7 +94,7 @@ export function Waveform({
     ctx.fillStyle = WAVEFORM_COLOR + '40'; // 25% opacity
     ctx.fill();
     ctx.stroke();
-  }, [waveformData, width, height]);
+  }, [waveformData, width, height, duration, trackDuration]);
 
   /**
    * Calculate time position from pixel position

@@ -210,6 +210,7 @@ export function TrackRow({
           height={40}
           currentTime={currentTime}
           duration={maxDuration || track.duration}
+          trackDuration={track.duration}
           onSeek={onSeek ? (time) => onSeek(track.id, time) : undefined}
         />
       </div>

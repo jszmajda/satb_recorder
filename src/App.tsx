@@ -6,6 +6,7 @@ import { TransportControl } from './components/TransportControl';
 import { ErrorNotification } from './components/ErrorNotification';
 import { VoicePartSection } from './components/VoicePartSection';
 import { RecordButton } from './components/RecordButton';
+import { TrackRow } from './components/TrackRow';
 import { useProjectStore } from './store/useProjectStore';
 import { useErrorStore } from './store/useErrorStore';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
@@ -15,6 +16,11 @@ function App() {
   const currentProject = useProjectStore((state) => state.currentProject);
   const addTrack = useProjectStore((state) => state.addTrack);
   const undoDeleteTrack = useProjectStore((state) => state.undoDeleteTrack);
+  const deleteTrack = useProjectStore((state) => state.deleteTrack);
+  const setTrackSolo = useProjectStore((state) => state.setTrackSolo);
+  const setTrackMute = useProjectStore((state) => state.setTrackMute);
+  const setTrackVolume = useProjectStore((state) => state.setTrackVolume);
+  const setTrackName = useProjectStore((state) => state.setTrackName);
 
   // Error handling [EARS: ERR-001, ERR-002, ERR-003]
   const error = useErrorStore((state) => state.error);
@@ -106,7 +112,19 @@ function App() {
                           });
                         }}
                       />
-                      {/* TODO: Render existing tracks here */}
+
+                      {/* Existing tracks */}
+                      {voicePart.tracks.map((track) => (
+                        <TrackRow
+                          key={track.id}
+                          track={track}
+                          onDelete={deleteTrack}
+                          onSoloToggle={(trackId) => setTrackSolo(trackId, !track.soloed)}
+                          onMuteToggle={(trackId) => setTrackMute(trackId, !track.muted)}
+                          onVolumeChange={setTrackVolume}
+                          onNameChange={setTrackName}
+                        />
+                      ))}
                     </VoicePartSection>
                   );
                 })}

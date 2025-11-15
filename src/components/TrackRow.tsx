@@ -2,17 +2,7 @@
 // Track row component with delete, solo, mute, volume, and name editing controls
 
 import React from 'react';
-
-export interface Track {
-  id: string;
-  name: string;
-  voicePartId: string;
-  audioBuffer: AudioBuffer | null;
-  duration: number;
-  solo: boolean;
-  mute: boolean;
-  volume: number;
-}
+import type { Track } from '@/store/types';
 
 export interface TrackRowProps {
   track: Track;
@@ -141,10 +131,10 @@ export function TrackRow({
       <button
         onClick={handleSoloClick}
         aria-label="Solo track"
-        className={track.solo ? 'active' : ''}
+        className={track.soloed ? 'active' : ''}
         style={{
           padding: '0.5rem 0.75rem',
-          backgroundColor: track.solo ? '#4caf50' : '#555',
+          backgroundColor: track.soloed ? '#4caf50' : '#555',
           color: '#fff',
           border: 'none',
           borderRadius: '4px',
@@ -162,10 +152,10 @@ export function TrackRow({
       <button
         onClick={handleMuteClick}
         aria-label="Mute track"
-        className={track.mute ? 'active' : ''}
+        className={track.muted ? 'active' : ''}
         style={{
           padding: '0.5rem 0.75rem',
-          backgroundColor: track.mute ? '#ff9800' : '#555',
+          backgroundColor: track.muted ? '#ff9800' : '#555',
           color: '#fff',
           border: 'none',
           borderRadius: '4px',
@@ -190,7 +180,7 @@ export function TrackRow({
           aria-label="Volume slider"
           style={{
             width: '100px',
-            opacity: track.mute ? 0.4 : 1,
+            opacity: track.muted ? 0.4 : 1,
           }}
         />
         <span

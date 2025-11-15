@@ -1,16 +1,19 @@
 import { describe, test, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { TrackRow } from './TrackRow';
+import type { Track } from '@/store/types';
 
-const mockTrack = {
+const mockTrack: Track = {
   id: 'track-1',
   name: 'Track 1',
-  voicePartId: 'soprano',
-  audioBuffer: null,
-  duration: 0,
-  solo: false,
-  mute: false,
+  voicePartType: 'S',
+  audioBlob: new Blob(['audio'], { type: 'audio/wav' }),
+  duration: 5,
+  soloed: false,
+  muted: false,
   volume: 100,
+  waveformData: [],
+  createdAt: new Date(),
 };
 
 describe('TRACK-011: Track controls layout', () => {
@@ -114,7 +117,7 @@ describe('TRACK-005: Solo button', () => {
   });
 
   test('shows active state when solo is true', () => {
-    const track = { ...mockTrack, solo: true };
+    const track = { ...mockTrack, soloed: true };
     render(<TrackRow track={track} />);
 
     const soloButton = screen.getByRole('button', { name: /solo/i });
@@ -122,7 +125,7 @@ describe('TRACK-005: Solo button', () => {
   });
 
   test('shows inactive state when solo is false', () => {
-    const track = { ...mockTrack, solo: false };
+    const track = { ...mockTrack, soloed: false };
     render(<TrackRow track={track} />);
 
     const soloButton = screen.getByRole('button', { name: /solo/i });
@@ -143,7 +146,7 @@ describe('TRACK-006: Mute button', () => {
   });
 
   test('shows active state when mute is true', () => {
-    const track = { ...mockTrack, mute: true };
+    const track = { ...mockTrack, muted: true };
     render(<TrackRow track={track} />);
 
     const muteButton = screen.getByRole('button', { name: /mute/i });
@@ -151,7 +154,7 @@ describe('TRACK-006: Mute button', () => {
   });
 
   test('shows inactive state when mute is false', () => {
-    const track = { ...mockTrack, mute: false };
+    const track = { ...mockTrack, muted: false };
     render(<TrackRow track={track} />);
 
     const muteButton = screen.getByRole('button', { name: /mute/i });
@@ -209,7 +212,7 @@ describe('TRACK-008, TRACK-009: Volume slider', () => {
   });
 
   test('grays out volume slider when muted', () => {
-    const track = { ...mockTrack, mute: true };
+    const track = { ...mockTrack, muted: true };
     render(<TrackRow track={track} />);
 
     const volumeSlider = screen.getByRole('slider', { name: /volume/i });
@@ -217,7 +220,7 @@ describe('TRACK-008, TRACK-009: Volume slider', () => {
   });
 
   test('volume slider not grayed when unmuted', () => {
-    const track = { ...mockTrack, mute: false };
+    const track = { ...mockTrack, muted: false };
     render(<TrackRow track={track} />);
 
     const volumeSlider = screen.getByRole('slider', { name: /volume/i });

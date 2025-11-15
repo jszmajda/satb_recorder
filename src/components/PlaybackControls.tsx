@@ -55,6 +55,7 @@ export function PlaybackControls({
 }: PlaybackControlsProps) {
   const [playState, setPlayState] = useState<PlayState>('stopped');
   const [internalCurrentTime, setInternalCurrentTime] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Use external currentTime if provided, otherwise use internal state
   const currentTime = externalCurrentTime !== undefined ? externalCurrentTime : internalCurrentTime;
@@ -89,7 +90,12 @@ export function PlaybackControls({
    */
   useEffect(() => {
     const loadTracks = async () => {
-      if (!mixerRef.current) return;
+      if (!mixerRef.current || tracks.length === 0) {
+        setIsLoading(false);
+        return;
+      }
+
+      setIsLoading(true);
 
       // Load all tracks
       for (const track of tracks) {
@@ -102,6 +108,8 @@ export function PlaybackControls({
           console.error(`Failed to load track ${track.id}:`, error);
         }
       }
+
+      setIsLoading(false);
     };
 
     loadTracks();
@@ -247,15 +255,17 @@ export function PlaybackControls({
         <button
           onClick={handlePlayPauseToggle}
           aria-label={playState === 'playing' ? 'Pause' : 'Play'}
+          disabled={isLoading}
           style={{
             padding: '0.5rem 1.5rem',
-            backgroundColor: '#4caf50',
+            backgroundColor: isLoading ? '#666' : '#4caf50',
             color: '#fff',
             border: 'none',
             borderRadius: '4px',
-            cursor: 'pointer',
+            cursor: isLoading ? 'not-allowed' : 'pointer',
             fontSize: '1rem',
             fontWeight: 'bold',
+            opacity: isLoading ? 0.6 : 1,
           }}
         >
           {playState === 'playing' ? '⏸' : '▶'}
@@ -280,6 +290,19 @@ export function PlaybackControls({
           ■
         </button>
       </div>
+
+      {/* Loading Indicator */}
+      {isLoading && (
+        <div
+          style={{
+            fontSize: '0.85rem',
+            color: '#ffeb3b',
+            marginBottom: '0.5rem',
+          }}
+        >
+          Loading tracks...
+        </div>
+      )}
 
       {/* Time Display */}
       {/* [EARS: PLAY-005] Display elapsed time and total duration */}

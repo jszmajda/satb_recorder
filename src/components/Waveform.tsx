@@ -110,6 +110,7 @@ export function Waveform({
    * [EARS: SEEK-001] Click-to-seek
    */
   const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!onSeek) return;
     const time = getTimeFromPosition(e.clientX, e.currentTarget);
     onSeek(time);
   };
@@ -129,7 +130,7 @@ export function Waveform({
    */
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
-      if (!isDragging) return;
+      if (!isDragging || !onSeek) return;
 
       const time = getTimeFromPosition(e.clientX);
       onSeek(time);

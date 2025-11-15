@@ -14,6 +14,7 @@ export interface TrackRowProps {
   onVolumeChange?: (trackId: string, newVolume: number) => void;
   onSeek?: (trackId: string, time: number) => void;
   currentTime?: number;
+  maxDuration?: number;
 }
 
 /**
@@ -29,6 +30,7 @@ export function TrackRow({
   onVolumeChange,
   onSeek,
   currentTime = 0,
+  maxDuration,
 }: TrackRowProps) {
   /**
    * Handle delete button click
@@ -207,7 +209,7 @@ export function TrackRow({
           width={300}
           height={40}
           currentTime={currentTime}
-          duration={track.duration}
+          duration={maxDuration || track.duration}
           onSeek={onSeek ? (time) => onSeek(track.id, time) : undefined}
         />
       </div>

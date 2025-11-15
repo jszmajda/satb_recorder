@@ -31,6 +31,21 @@ function App() {
   // [EARS: SEEK-001, SEEK-002, SEEK-003] Playback time state for seeking integration
   const [currentTime, setCurrentTime] = useState(0);
 
+  // Calculate maximum duration across all tracks for waveform alignment
+  const maxDuration = useMemo(() => {
+    if (!currentProject) return 0;
+
+    let max = 0;
+    for (const voicePart of currentProject.voiceParts) {
+      for (const track of voicePart.tracks) {
+        if (track.duration > max) {
+          max = track.duration;
+        }
+      }
+    }
+    return max;
+  }, [currentProject]);
+
   // [EARS: SEEK-001, SEEK-002, SEEK-003] Handle seek from waveform
   const handleSeek = (trackId: string, time: number) => {
     setCurrentTime(time);
@@ -80,6 +95,7 @@ function App() {
                 <h2 className="text-xl font-bold mb-4">Transport Controls</h2>
                 {/* [EARS: SEEK-001, SEEK-002, SEEK-003] PlaybackControls with seeking support */}
                 <PlaybackControls
+                  totalDuration={maxDuration}
                   currentTime={currentTime}
                   onCurrentTimeChange={setCurrentTime}
                   onSeek={setCurrentTime}
@@ -165,6 +181,7 @@ function App() {
                           onNameChange={setTrackName}
                           currentTime={currentTime}
                           onSeek={handleSeek}
+                          maxDuration={maxDuration}
                         />
                       ))}
                     </VoicePartSection>

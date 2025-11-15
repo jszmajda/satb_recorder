@@ -79,11 +79,12 @@ export function MicrophoneSelector() {
       }
 
       // Auto-select a default device if none selected
+      // [EARS: MIC-006] Auto-select with priority: starts with "default" > last device
       const currentDevice = recorderRef.current.getSelectedDeviceId();
       if (!currentDevice && mappedDevices.length > 0) {
-        // Try to find device with "default" in the label (case insensitive)
+        // Try to find device that starts with "default" (case insensitive)
         const defaultDevice = mappedDevices.find(device =>
-          device.label.toLowerCase().includes('default')
+          device.label.toLowerCase().startsWith('default')
         );
 
         // Use default device if found, otherwise use last device in list
@@ -93,7 +94,7 @@ export function MicrophoneSelector() {
         recorderRef.current.setSelectedDevice(deviceToSelect.deviceId);
         setSelectedDeviceId(deviceToSelect.deviceId);
       } else if (currentDevice) {
-        // Keep existing selection
+        // Keep existing selection (MIC-006.3)
         setSelectedDeviceId(currentDevice);
       }
     } catch (err) {

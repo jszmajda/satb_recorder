@@ -360,10 +360,12 @@ This document outlines the implementation phases and tasks for building the SATB
 - [x] Write tests for device selection (MIC-003)
 - [x] Implement device selection handling
 - [x] Implement selected device persistence
+- [x] Write tests for auto-selection (MIC-006)
+- [x] Implement auto-selection with "default" priority
 
-**EARS Requirements:** MIC-002, MIC-003
+**EARS Requirements:** MIC-002, MIC-003, MIC-006
 
-**Test Coverage:** 18 tests in src/components/MicrophoneSelector.test.tsx
+**Test Coverage:** 25 tests in src/components/MicrophoneSelector.test.tsx
 
 **Completed:** 2025-11-14
 
@@ -372,6 +374,8 @@ This document outlines the implementation phases and tasks for building the SATB
 - Dropdown selector with device labels
 - Device selection with Recorder integration
 - Refresh button to re-enumerate devices
+- Auto-selection with priority: device starting with "default" > last device
+- Preserves manual selection on re-enumeration
 - Loading state during enumeration
 - Error handling for enumeration failures
 - Empty device list handling

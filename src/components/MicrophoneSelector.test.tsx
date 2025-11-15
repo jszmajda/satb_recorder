@@ -319,7 +319,7 @@ describe('MicrophoneSelector: Auto-select default device', () => {
   });
 
   // ✅ Happy path
-  test('auto-selects device with "default" in label', async () => {
+  test('auto-selects device that starts with "default"', async () => {
     mockRecorder.enumerateDevices.mockResolvedValue([
       { deviceId: 'mic-1', label: 'Built-in Microphone' },
       { deviceId: 'mic-2', label: 'Default - USB Microphone' },
@@ -357,6 +357,20 @@ describe('MicrophoneSelector: Auto-select default device', () => {
 
     await waitFor(() => {
       expect(mockRecorder.setSelectedDevice).toHaveBeenCalledWith('mic-3');
+    });
+  });
+
+  test('ignores "default" in middle of label and selects last device', async () => {
+    mockRecorder.enumerateDevices.mockResolvedValue([
+      { deviceId: 'mic-1', label: 'Built-in Microphone' },
+      { deviceId: 'mic-2', label: 'USB Default Microphone' },  // has "default" but not at start
+      { deviceId: 'mic-3', label: 'Bluetooth Headset' },
+    ]);
+
+    render(<MicrophoneSelector />);
+
+    await waitFor(() => {
+      expect(mockRecorder.setSelectedDevice).toHaveBeenCalledWith('mic-3');  // Should select last device
     });
   });
 

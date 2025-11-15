@@ -218,6 +218,10 @@ interface UndoState {
 **MIC-003**: WHEN user changes microphone selection, the system shall use the newly selected device for subsequent recordings.
 **MIC-004**: WHEN microphone permission is denied, the system shall display an error message.
 **MIC-005**: WHILE recording is active, the system shall display a real-time VU meter showing microphone input level.
+**MIC-006**: WHEN microphone devices are enumerated AND no device is currently selected, the system shall automatically select a default device using the following priority:
+  1. IF a device label starts with "default" (case insensitive), select that device
+  2. ELSE select the last device in the enumerated list
+  3. IF user has manually selected a device, the system shall preserve that selection when re-enumerating
 
 ### Recording
 

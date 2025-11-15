@@ -58,7 +58,8 @@ export class Visualizer {
       // Extract waveform from audio buffer
       return this.extractWaveform(audioBuffer);
     } catch (error) {
-      throw new Error('Failed to generate waveform');
+      console.error('Waveform generation error details:', error);
+      throw new Error(`Failed to generate waveform: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 

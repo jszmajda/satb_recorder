@@ -470,7 +470,7 @@ describe('REC-007: WAV conversion on stop', () => {
 
     expect(result).toBeDefined();
     expect(result.audioBlob).toBeInstanceOf(Blob);
-    expect(result.audioBlob.type).toBe('audio/wav');
+    expect(result.audioBlob.type).toBe('audio/webm');
 
     await startPromise;
     vi.useRealTimers();

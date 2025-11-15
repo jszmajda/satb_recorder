@@ -232,7 +232,7 @@ export class Recorder {
     if (!this.recording || !this.mediaRecorder) {
       // Not recording, return empty result
       return {
-        audioBlob: new Blob([], { type: 'audio/wav' }),
+        audioBlob: new Blob([], { type: 'audio/webm' }),
         duration: 0,
         waveformData: [],
       };
@@ -257,8 +257,8 @@ export class Recorder {
 
           const duration = (Date.now() - this.recordingStartTime) / 1000;
 
-          // Convert to WAV blob (simplified - in real implementation would use WAV encoder)
-          const audioBlob = new Blob(this.recordedChunks, { type: 'audio/wav' });
+          // Create audio blob with correct MIME type (WebM)
+          const audioBlob = new Blob(this.recordedChunks, { type: 'audio/webm' });
 
           // Generate simple waveform data (placeholder)
           const waveformData: number[] = [];

@@ -3,15 +3,6 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { ToneGenerator as ToneGeneratorComponent } from './ToneGenerator';
 import { ToneGenerator } from '../audio/toneGenerator';
 
-// Mock AudioContext
-const mockAudioContext = {
-  close: vi.fn(),
-};
-
-global.AudioContext = vi.fn(function() {
-  return mockAudioContext;
-} as any);
-
 // Mock ToneGenerator class
 vi.mock('../audio/toneGenerator');
 
@@ -208,7 +199,6 @@ describe('ToneGenerator: Component lifecycle', () => {
     vi.mocked(ToneGenerator).mockImplementation(function() {
       return mockToneGenerator;
     } as any);
-    mockAudioContext.close.mockClear();
   });
 
   afterEach(() => {
@@ -233,16 +223,22 @@ describe('ToneGenerator: Component lifecycle', () => {
 
   test('cleans up audio context on unmount', () => {
     let createdAudioContext: any = null;
-    (global.AudioContext as any).mockImplementationOnce(function() {
-      createdAudioContext = { ...mockAudioContext };
+    const originalAudioContext = global.AudioContext;
+
+    // Capture the created AudioContext
+    global.AudioContext = vi.fn(function() {
+      createdAudioContext = (originalAudioContext as any)();
       return createdAudioContext;
-    });
+    }) as any;
 
     const { unmount } = render(<ToneGeneratorComponent />);
 
     unmount();
 
     expect(createdAudioContext.close).toHaveBeenCalled();
+
+    // Restore original mock
+    global.AudioContext = originalAudioContext;
   });
 
   test('stops any playing tone on unmount', () => {

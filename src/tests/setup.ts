@@ -343,4 +343,69 @@ beforeAll(() => {
   }
 
   global.Blob = MockBlob as any;
+
+  // Mock HTMLCanvasElement.getContext
+  HTMLCanvasElement.prototype.getContext = vi.fn().mockImplementation(function(this: HTMLCanvasElement, contextType: string) {
+    if (contextType === '2d') {
+      return {
+        canvas: this,
+        fillStyle: '',
+        strokeStyle: '',
+        lineWidth: 1,
+        lineCap: 'butt',
+        lineJoin: 'miter',
+        miterLimit: 10,
+        shadowColor: '',
+        shadowBlur: 0,
+        shadowOffsetX: 0,
+        shadowOffsetY: 0,
+        font: '10px sans-serif',
+        textAlign: 'start',
+        textBaseline: 'alphabetic',
+        globalAlpha: 1,
+        globalCompositeOperation: 'source-over',
+        fillRect: vi.fn(),
+        strokeRect: vi.fn(),
+        clearRect: vi.fn(),
+        fill: vi.fn(),
+        stroke: vi.fn(),
+        beginPath: vi.fn(),
+        moveTo: vi.fn(),
+        lineTo: vi.fn(),
+        closePath: vi.fn(),
+        arc: vi.fn(),
+        arcTo: vi.fn(),
+        ellipse: vi.fn(),
+        rect: vi.fn(),
+        quadraticCurveTo: vi.fn(),
+        bezierCurveTo: vi.fn(),
+        scale: vi.fn(),
+        rotate: vi.fn(),
+        translate: vi.fn(),
+        transform: vi.fn(),
+        setTransform: vi.fn(),
+        resetTransform: vi.fn(),
+        save: vi.fn(),
+        restore: vi.fn(),
+        clip: vi.fn(),
+        isPointInPath: vi.fn().mockReturnValue(false),
+        isPointInStroke: vi.fn().mockReturnValue(false),
+        fillText: vi.fn(),
+        strokeText: vi.fn(),
+        measureText: vi.fn().mockReturnValue({ width: 0 }),
+        drawImage: vi.fn(),
+        createImageData: vi.fn(),
+        getImageData: vi.fn().mockReturnValue({
+          data: new Uint8ClampedArray(0),
+          width: 0,
+          height: 0,
+        }),
+        putImageData: vi.fn(),
+        createLinearGradient: vi.fn(),
+        createRadialGradient: vi.fn(),
+        createPattern: vi.fn(),
+      };
+    }
+    return null;
+  }) as any;
 });

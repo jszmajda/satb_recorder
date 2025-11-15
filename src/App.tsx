@@ -108,9 +108,18 @@ function App() {
                       trackCount={voicePart.tracks.length}
                     >
                       {/* RecordButton for adding new tracks */}
+                      {/* [EARS: REC-005, OVER-002, REC-009] Recording with overdub support and auto-save */}
                       <RecordButton
                         voicePartId={voicePart.type}
                         bpm={currentProject.bpm}
+                        overdubEnabled={currentProject.overdubEnabled}
+                        tracks={voicePart.tracks.map(track => ({
+                          id: track.id,
+                          audioBlob: track.audioBlob,
+                          volume: track.volume,
+                          muted: track.muted,
+                          soloed: track.soloed,
+                        }))}
                         onRecordingComplete={async (result) => {
                           // [EARS: VIS-001, REC-008] Generate waveform data from recording
                           let waveformData: number[] = [];
@@ -121,7 +130,7 @@ function App() {
                             // Continue with empty waveform - non-critical feature
                           }
 
-                          // Add track to project via store
+                          // [EARS: REC-009] Add track to project via store (auto-saves to IndexedDB)
                           await addTrack(voicePart.type as VoicePartType, {
                             audioBlob: result.blob,
                             duration: result.duration,

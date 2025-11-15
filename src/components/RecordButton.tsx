@@ -6,12 +6,23 @@ import { Recorder } from '../audio/recorder';
 import { Metronome } from '../audio/metronome';
 import { VUMeter as VUMeterClass } from '../audio/vuMeter';
 import { VUMeter } from './VUMeter';
+import { Mixer } from '../audio/mixer';
 import { useErrorStore } from '../store/useErrorStore';
 import { useMicrophoneStore } from '../store/useMicrophoneStore';
+
+export interface RecordButtonTrack {
+  id: string;
+  audioBlob: Blob;
+  volume: number;
+  muted: boolean;
+  soloed: boolean;
+}
 
 export interface RecordButtonProps {
   voicePartId: string;
   bpm?: number;
+  overdubEnabled?: boolean;
+  tracks?: RecordButtonTrack[];
   onRecordingComplete: (result: { blob: Blob; duration: number }) => void;
 }
 
@@ -21,11 +32,13 @@ const COUNTDOWN_DURATION = 3; // seconds
 
 /**
  * RecordButton component handles the complete recording workflow
- * [EARS: REC-001 through REC-007]
+ * [EARS: REC-001 through REC-007, REC-005, OVER-002]
  */
 export function RecordButton({
   voicePartId,
   bpm = 120,
+  overdubEnabled = false,
+  tracks = [],
   onRecordingComplete,
 }: RecordButtonProps) {
   const [recordingState, setRecordingState] = useState<RecordingState>('idle');
@@ -42,6 +55,7 @@ export function RecordButton({
   const recorderRef = useRef<Recorder | null>(null);
   const metronomeRef = useRef<Metronome | null>(null);
   const vuMeterRef = useRef<VUMeterClass | null>(null);
+  const mixerRef = useRef<Mixer | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const vuIntervalRef = useRef<number | null>(null);
   const countdownIntervalRef = useRef<number | null>(null);
@@ -55,6 +69,7 @@ export function RecordButton({
     recorderRef.current = new Recorder();
     metronomeRef.current = new Metronome(bpm);
     vuMeterRef.current = new VUMeterClass(audioContextRef.current);
+    mixerRef.current = new Mixer(audioContextRef.current);
 
     return () => {
       if (vuIntervalRef.current) {
@@ -65,6 +80,9 @@ export function RecordButton({
       }
       if (vuMeterRef.current) {
         vuMeterRef.current.disconnect();
+      }
+      if (mixerRef.current) {
+        mixerRef.current.dispose();
       }
       if (metronomeRef.current) {
         metronomeRef.current.stop();
@@ -137,6 +155,7 @@ export function RecordButton({
    * Start recording
    * [EARS: REC-003] Start MediaRecorder and metronome
    * [EARS: REC-004] Display VU meter during recording
+   * [EARS: REC-005, OVER-002] Play existing tracks if overdub enabled
    */
   const startRecording = async () => {
     if (!streamRef.current || !recorderRef.current) return;
@@ -155,6 +174,25 @@ export function RecordButton({
       }, 50); // Update 20 times per second
     }
 
+    // [EARS: REC-005, OVER-002] If overdub enabled, load and play existing tracks
+    if (overdubEnabled && mixerRef.current && tracks.length > 0) {
+      try {
+        // Load all tracks into mixer
+        for (const track of tracks) {
+          await mixerRef.current.loadTrack(track.id, track.audioBlob);
+          // Set track volume, mute, and solo states
+          mixerRef.current.setVolume(track.id, track.volume);
+          mixerRef.current.setMuted(track.id, track.muted);
+          mixerRef.current.setSoloed(track.id, track.soloed);
+        }
+        // Start playback
+        mixerRef.current.play();
+      } catch (error) {
+        console.error('Failed to load/play overdub tracks:', error);
+        // Continue recording even if overdub playback fails
+      }
+    }
+
     // [EARS: REC-003] Start MediaRecorder
     await recorderRef.current.startRecording(streamRef.current);
 
@@ -167,6 +205,7 @@ export function RecordButton({
   /**
    * Stop recording
    * [EARS: REC-007] Convert to WAV blob on stop
+   * [EARS: REC-005, OVER-002] Stop mixer playback if overdub was enabled
    */
   const handleStopClick = async () => {
     if (!recorderRef.current) return;
@@ -180,6 +219,11 @@ export function RecordButton({
     // Disconnect VU meter
     if (vuMeterRef.current) {
       vuMeterRef.current.disconnect();
+    }
+
+    // [EARS: REC-005, OVER-002] Stop mixer if overdub was enabled
+    if (mixerRef.current) {
+      mixerRef.current.stop();
     }
 
     // Stop metronome

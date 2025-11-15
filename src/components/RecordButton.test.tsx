@@ -5,6 +5,7 @@ import { Recorder } from '../audio/recorder';
 import { Metronome } from '../audio/metronome';
 import { VUMeter } from '../audio/vuMeter';
 import { Visualizer } from '../audio/visualizer';
+import { Mixer } from '../audio/mixer';
 
 // Mock AudioContext
 const mockAudioContext = {
@@ -20,6 +21,7 @@ vi.mock('../audio/recorder');
 vi.mock('../audio/metronome');
 vi.mock('../audio/vuMeter');
 vi.mock('../audio/visualizer');
+vi.mock('../audio/mixer');
 
 describe('REC-001: Request microphone permission on Add Track', () => {
   let mockRecorder: any;
@@ -703,6 +705,196 @@ describe('RecordButton: Component states', () => {
     });
 
     expect(screen.getByRole('button', { name: /record|add track/i })).toBeInTheDocument();
+
+    vi.useRealTimers();
+  });
+});
+
+describe('REC-005, OVER-002: Overdub muting logic', () => {
+  let mockRecorder: any;
+  let mockMetronome: any;
+  let mockVUMeter: any;
+  let mockMixer: any;
+
+  beforeEach(() => {
+    const mockStream = {
+      getTracks: vi.fn().mockReturnValue([{ stop: vi.fn() }]),
+    };
+
+    mockRecorder = {
+      setSelectedDevice: vi.fn(),
+      requestMicrophoneAccess: vi.fn().mockResolvedValue(mockStream),
+      startRecording: vi.fn().mockResolvedValue(undefined),
+      stopRecording: vi.fn().mockResolvedValue({
+        audioBlob: new Blob(['audio data'], { type: 'audio/webm' }),
+        duration: 5.5,
+        waveformData: [],
+      }),
+      dispose: vi.fn(),
+    };
+
+    mockMetronome = {
+      start: vi.fn(),
+      stop: vi.fn(),
+      dispose: vi.fn(),
+    };
+
+    mockVUMeter = {
+      connect: vi.fn(),
+      disconnect: vi.fn(),
+      getVolume: vi.fn().mockReturnValue(0.5),
+    };
+
+    mockMixer = {
+      loadTrack: vi.fn().mockResolvedValue(undefined),
+      play: vi.fn(),
+      stop: vi.fn(),
+      dispose: vi.fn(),
+    };
+
+    vi.mocked(Recorder).mockImplementation(function() {
+      return mockRecorder;
+    } as any);
+    vi.mocked(Metronome).mockImplementation(function() {
+      return mockMetronome;
+    } as any);
+    vi.mocked(VUMeter).mockImplementation(function() {
+      return mockVUMeter;
+    } as any);
+    vi.mocked(Mixer).mockImplementation(function() {
+      return mockMixer;
+    } as any);
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  test('does not play tracks when overdub is disabled', async () => {
+    vi.useFakeTimers();
+
+    const mockTracks = [
+      { id: 'track-1', audioBlob: new Blob(), volume: 100, muted: false, soloed: false },
+    ];
+
+    render(
+      <RecordButton
+        voicePartId="soprano"
+        bpm={120}
+        overdubEnabled={false}
+        tracks={mockTracks}
+        onRecordingComplete={vi.fn()}
+      />
+    );
+
+    const recordButton = screen.getByRole('button', { name: /record track/i });
+
+    await act(async () => {
+      fireEvent.click(recordButton);
+      await Promise.resolve();
+    });
+
+    // Wait for countdown
+    await act(async () => {
+      vi.advanceTimersByTime(3000);
+      await Promise.resolve();
+    });
+
+    // Mixer should NOT be used when overdub is disabled
+    expect(mockMixer.loadTrack).not.toHaveBeenCalled();
+    expect(mockMixer.play).not.toHaveBeenCalled();
+
+    vi.useRealTimers();
+  });
+
+  test('plays tracks when overdub is enabled', async () => {
+    vi.useFakeTimers();
+
+    const mockTracks = [
+      {
+        id: 'track-1',
+        audioBlob: new Blob(['audio'], { type: 'audio/webm' }),
+        volume: 100,
+        muted: false,
+        soloed: false
+      },
+    ];
+
+    render(
+      <RecordButton
+        voicePartId="soprano"
+        bpm={120}
+        overdubEnabled={true}
+        tracks={mockTracks}
+        onRecordingComplete={vi.fn()}
+      />
+    );
+
+    const recordButton = screen.getByRole('button', { name: /record track/i });
+
+    await act(async () => {
+      fireEvent.click(recordButton);
+      await Promise.resolve();
+    });
+
+    // Wait for countdown
+    await act(async () => {
+      vi.advanceTimersByTime(3000);
+      await Promise.resolve();
+    });
+
+    // Mixer should load track and play when overdub is enabled
+    expect(mockMixer.loadTrack).toHaveBeenCalledWith('track-1', mockTracks[0].audioBlob);
+    expect(mockMixer.play).toHaveBeenCalled();
+
+    vi.useRealTimers();
+  });
+
+  test('stops mixer on recording stop when overdub enabled', async () => {
+    vi.useFakeTimers();
+
+    const mockTracks = [
+      {
+        id: 'track-1',
+        audioBlob: new Blob(['audio'], { type: 'audio/webm' }),
+        volume: 100,
+        muted: false,
+        soloed: false
+      },
+    ];
+
+    render(
+      <RecordButton
+        voicePartId="soprano"
+        bpm={120}
+        overdubEnabled={true}
+        tracks={mockTracks}
+        onRecordingComplete={vi.fn()}
+      />
+    );
+
+    const recordButton = screen.getByRole('button', { name: /record track/i });
+
+    await act(async () => {
+      fireEvent.click(recordButton);
+      await Promise.resolve();
+    });
+
+    // Wait for countdown
+    await act(async () => {
+      vi.advanceTimersByTime(3000);
+      await Promise.resolve();
+    });
+
+    const stopButton = screen.getByRole('button', { name: /stop recording/i });
+
+    await act(async () => {
+      fireEvent.click(stopButton);
+      await Promise.resolve();
+    });
+
+    // Mixer should be stopped when recording stops
+    expect(mockMixer.stop).toHaveBeenCalled();
 
     vi.useRealTimers();
   });

@@ -582,42 +582,52 @@ This document outlines the implementation phases and tasks for building the SATB
 
 ## Phase 5: Integration - Recording Flow
 
-### 5.1 Record Workflow Integration
+### 5.1 Record Workflow Integration ✅
 - [x] Write integration tests for full recording flow (REC-001 through REC-010)
 - [x] Integrate microphone permission request
 - [x] Integrate countdown UI
 - [x] Integrate metronome start
 - [x] Integrate VU meter display during recording
-- [ ] Integrate overdub muting logic
+- [x] Integrate overdub muting logic (REC-005, OVER-002)
 - [x] Integrate recording stop and WAV conversion
-- [ ] Integrate waveform generation
-- [ ] Integrate auto-save to IndexedDB
+- [x] Integrate waveform generation (REC-008)
+- [x] Integrate auto-save to IndexedDB (REC-009)
 - [x] Integrate sparkline replacement of VU meter
 
-**EARS Requirements:** REC-001, REC-002, REC-003, REC-004, REC-005, REC-006, REC-007, REC-008, REC-009, REC-010
+**EARS Requirements:** REC-001, REC-002, REC-003, REC-004, REC-005, REC-006, REC-007, REC-008, REC-009, REC-010, OVER-002
 
 **Component:** RecordButton - Orchestrates complete recording workflow
-- Integrates Recorder, Metronome, VUMeter classes
+- Integrates Recorder, Metronome, VUMeter, Mixer classes
 - Manages recording states: idle, requesting-permission, countdown, recording, error
 - Handles permission errors with user-friendly messages
 - Displays 3-2-1 countdown before recording starts
 - Shows VU meter during recording
 - Converts to WAV blob on stop
 - Coordinates metronome start/stop with recording
+- **NEW**: Overdub playback during recording when enabled (REC-005, OVER-002)
+  - Loads existing tracks into Mixer
+  - Sets track volume, mute, and solo states
+  - Plays tracks during recording if overdub enabled
+  - Mutes all tracks if overdub disabled
+  - Stops mixer when recording stops
 
-**Integration Tests:** 19 tests (all passing ✅)
+**Integration Tests:** 22 tests (all passing ✅)
 - REC-001: Microphone permission (3 tests)
 - REC-002: Countdown display (3 tests)
 - REC-003: Metronome/recorder start (3 tests)
 - REC-004: VU meter display (3 tests)
 - REC-007: WAV conversion (3 tests)
+- REC-005, OVER-002: Overdub muting logic (3 tests)
 - Component states (4 tests)
 
-**Test Status:** All integration tests green and reliable using act() with fake timers. Individual components (Recorder, Metronome, VUMeter) also have comprehensive unit tests. Total: 576 tests passing.
+**Test Status:** All integration tests green and reliable using act() with fake timers. Individual components (Recorder, Metronome, VUMeter, Mixer) also have comprehensive unit tests. Total: 695 tests passing.
 
 **Files:**
-- `src/components/RecordButton.tsx` - Recording workflow orchestration
-- `src/components/RecordButton.test.tsx` - Integration tests
+- `src/components/RecordButton.tsx` - Recording workflow orchestration with overdub support
+- `src/components/RecordButton.test.tsx` - Integration tests (22 tests)
+- `src/App.tsx` - Waveform generation and auto-save integration
+
+**Completed:** 2025-11-14
 
 ---
 

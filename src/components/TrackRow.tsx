@@ -1,8 +1,9 @@
-// [EARS: TRACK-001, TRACK-002, TRACK-005, TRACK-006, TRACK-008, TRACK-009, TRACK-010, TRACK-011]
+// [EARS: TRACK-001, TRACK-002, TRACK-005, TRACK-006, TRACK-008, TRACK-009, TRACK-010, TRACK-011, VIS-002]
 // Track row component with delete, solo, mute, volume, and name editing controls
 
 import React from 'react';
 import type { Track } from '@/store/types';
+import { Waveform } from './Waveform';
 
 export interface TrackRowProps {
   track: Track;
@@ -11,6 +12,8 @@ export interface TrackRowProps {
   onSoloToggle?: (trackId: string) => void;
   onMuteToggle?: (trackId: string) => void;
   onVolumeChange?: (trackId: string, newVolume: number) => void;
+  onSeek?: (trackId: string, time: number) => void;
+  currentTime?: number;
 }
 
 /**
@@ -24,6 +27,8 @@ export function TrackRow({
   onSoloToggle,
   onMuteToggle,
   onVolumeChange,
+  onSeek,
+  currentTime = 0,
 }: TrackRowProps) {
   /**
    * Handle delete button click
@@ -192,6 +197,19 @@ export function TrackRow({
         >
           {track.volume}%
         </span>
+      </div>
+
+      {/* Waveform Visualization */}
+      {/* [EARS: VIS-002] Display waveform sparkline */}
+      <div style={{ flex: 2, minWidth: '200px' }}>
+        <Waveform
+          data={track.waveformData}
+          width={300}
+          height={40}
+          currentTime={currentTime}
+          duration={track.duration}
+          onSeek={onSeek ? (time) => onSeek(track.id, time) : undefined}
+        />
       </div>
     </div>
   );

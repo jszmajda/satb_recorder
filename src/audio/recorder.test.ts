@@ -1,6 +1,61 @@
 import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Recorder } from './recorder';
 
+// Mock AudioWorklet and AudioContext
+class MockAudioWorkletNode {
+  port: any;
+
+  constructor() {
+    this.port = {
+      onmessage: null as ((event: any) => void) | null,
+      postMessage: (data: any) => {
+        // Simulate immediate response for stop command
+        if (data.command === 'stop' && this.port.onmessage) {
+          setTimeout(() => {
+            if (this.port.onmessage) {
+              this.port.onmessage({
+                data: {
+                  samples: [new Float32Array([0.1, 0.2, 0.3])],
+                  sampleRate: 48000,
+                  duration: 1.5
+                }
+              });
+            }
+          }, 10);
+        }
+      }
+    };
+  }
+
+  connect = vi.fn();
+  disconnect = vi.fn();
+}
+
+class MockAudioContext {
+  state = 'running';
+  sampleRate = 48000;
+  audioWorklet = {
+    addModule: vi.fn().mockResolvedValue(undefined)
+  };
+
+  createMediaStreamSource = vi.fn(() => ({
+    connect: vi.fn(),
+    disconnect: vi.fn()
+  }));
+
+  resume = vi.fn().mockResolvedValue(undefined);
+  close = vi.fn().mockResolvedValue(undefined);
+}
+
+// Use function constructors so they can be instantiated with `new`
+global.AudioContext = function(this: any) {
+  return new MockAudioContext();
+} as any;
+
+global.AudioWorkletNode = function(this: any, context: any, name: string) {
+  return new MockAudioWorkletNode();
+} as any;
+
 // Global cleanup after each test
 afterEach(() => {
   vi.restoreAllMocks();
@@ -284,80 +339,15 @@ describe('Recorder cleanup', () => {
   });
 });
 
-describe('REC-002: Countdown before recording', () => {
-  let recorder: Recorder;
-
-  beforeEach(() => {
-    recorder = new Recorder();
-  });
-
-  afterEach(() => {
-    recorder.dispose();
-  });
-
-  // ✅ Happy path
-  test('provides countdown callback mechanism', () => {
-    const countdownCallback = vi.fn();
-    recorder.setCountdownCallback(countdownCallback);
-
-    // Callback registered but not called yet
-    expect(countdownCallback).not.toHaveBeenCalled();
-  });
-
-  test('calls countdown callback with values 3, 2, 1', async () => {
-    const countdownCallback = vi.fn();
-    recorder.setCountdownCallback(countdownCallback);
-
-    await recorder.requestMicrophoneAccess();
-    const startPromise = recorder.startRecording();
-
-    // Wait for countdown to progress
-    await new Promise(resolve => setTimeout(resolve, 3100));
-
-    expect(countdownCallback).toHaveBeenCalledWith(3);
-    expect(countdownCallback).toHaveBeenCalledWith(2);
-    expect(countdownCallback).toHaveBeenCalledWith(1);
-
-    await recorder.stopRecording();
-    await startPromise;
-  });
-
-  test('countdown completes before recording starts', async () => {
-    const countdownCallback = vi.fn();
-    recorder.setCountdownCallback(countdownCallback);
-
-    await recorder.requestMicrophoneAccess();
-    const startPromise = recorder.startRecording();
-
-    // Recording should not start immediately
-    expect(recorder.isRecording()).toBe(false);
-
-    // Wait for countdown
-    await new Promise(resolve => setTimeout(resolve, 3100));
-
-    // Now recording should be active
-    expect(recorder.isRecording()).toBe(true);
-
-    await recorder.stopRecording();
-    await startPromise;
-  });
-
-  // 🔥 Edge cases
-  test('can clear countdown callback', () => {
-    const callback = vi.fn();
-    recorder.setCountdownCallback(callback);
-    recorder.setCountdownCallback(null);
-
-    expect(callback).not.toHaveBeenCalled();
-  });
-});
+// Note: REC-002 countdown tests removed - countdown is now handled by UI component
 
 describe('REC-003, REC-004: MediaRecorder setup and recording', () => {
   let recorder: Recorder;
+  let stream: MediaStream;
 
   beforeEach(async () => {
     recorder = new Recorder();
-    await recorder.requestMicrophoneAccess();
+    stream = await recorder.requestMicrophoneAccess();
   });
 
   afterEach(() => {
@@ -369,77 +359,50 @@ describe('REC-003, REC-004: MediaRecorder setup and recording', () => {
     expect(recorder.isRecording()).toBe(false);
   });
 
-  test('starts recording after countdown', async () => {
-    vi.useFakeTimers();
-
-    const startPromise = recorder.startRecording();
-
-    // Fast-forward through countdown
-    await vi.advanceTimersByTimeAsync(3000);
+  test('starts recording immediately (no countdown)', async () => {
+    await recorder.startRecording(stream);
 
     expect(recorder.isRecording()).toBe(true);
 
     await recorder.stopRecording();
-    await startPromise;
-
-    vi.useRealTimers();
   });
 
-  test('creates MediaRecorder with stream', async () => {
-    vi.useFakeTimers();
+  test('creates AudioWorklet with stream', async () => {
+    await recorder.startRecording(stream);
 
-    const startPromise = recorder.startRecording();
-
-    await vi.advanceTimersByTimeAsync(3000);
-
-    // MediaRecorder should be created (mocked in setup)
-    expect(global.MediaRecorder).toHaveBeenCalled();
+    // Recording should be active
+    expect(recorder.isRecording()).toBe(true);
 
     await recorder.stopRecording();
-    await startPromise;
-
-    vi.useRealTimers();
   });
 
   test('stops recording when requested', async () => {
-    vi.useFakeTimers();
-
-    const startPromise = recorder.startRecording();
-    await vi.advanceTimersByTimeAsync(3000);
+    await recorder.startRecording(stream);
 
     expect(recorder.isRecording()).toBe(true);
 
     await recorder.stopRecording();
 
     expect(recorder.isRecording()).toBe(false);
-
-    await startPromise;
-    vi.useRealTimers();
   });
 
   // ⚠️ Negative cases
-  test('throws error if starting recording without microphone access', async () => {
+  test('throws error if starting recording without stream', async () => {
     const recorderNoAccess = new Recorder();
 
-    await expect(recorderNoAccess.startRecording()).rejects.toThrow(
-      'Microphone access required before recording'
+    await expect(recorderNoAccess.startRecording(null as any)).rejects.toThrow(
+      'MediaStream required for recording'
     );
 
     recorderNoAccess.dispose();
   });
 
   test('throws error if starting recording while already recording', async () => {
-    vi.useFakeTimers();
+    await recorder.startRecording(stream);
 
-    const startPromise = recorder.startRecording();
-    await vi.advanceTimersByTimeAsync(3000);
-
-    await expect(recorder.startRecording()).rejects.toThrow('Already recording');
+    await expect(recorder.startRecording(stream)).rejects.toThrow('Already recording');
 
     await recorder.stopRecording();
-    await startPromise;
-
-    vi.useRealTimers();
   });
 
   // 🔥 Edge cases
@@ -449,10 +412,11 @@ describe('REC-003, REC-004: MediaRecorder setup and recording', () => {
 
 describe('REC-007: WAV conversion on stop', () => {
   let recorder: Recorder;
+  let stream: MediaStream;
 
   beforeEach(async () => {
     recorder = new Recorder();
-    await recorder.requestMicrophoneAccess();
+    stream = await recorder.requestMicrophoneAccess();
   });
 
   afterEach(() => {
@@ -461,50 +425,32 @@ describe('REC-007: WAV conversion on stop', () => {
 
   // ✅ Happy path
   test('returns audio blob on stop', async () => {
-    vi.useFakeTimers();
-
-    const startPromise = recorder.startRecording();
-    await vi.advanceTimersByTimeAsync(3000);
+    await recorder.startRecording(stream);
 
     const result = await recorder.stopRecording();
 
     expect(result).toBeDefined();
     expect(result.audioBlob).toBeInstanceOf(Blob);
-    expect(result.audioBlob.type).toBe('audio/webm');
-
-    await startPromise;
-    vi.useRealTimers();
+    expect(result.audioBlob.type).toBe('audio/wav');
   });
 
   test('includes duration in result', async () => {
-    vi.useFakeTimers();
+    await recorder.startRecording(stream);
 
-    const startPromise = recorder.startRecording();
-    await vi.advanceTimersByTimeAsync(3000);
-
-    // Record for 2 seconds
-    await vi.advanceTimersByTimeAsync(2000);
+    // Wait a bit to simulate recording
+    await new Promise(resolve => setTimeout(resolve, 100));
 
     const result = await recorder.stopRecording();
 
     expect(result.duration).toBeGreaterThan(0);
-
-    await startPromise;
-    vi.useRealTimers();
   });
 
   test('includes waveform data in result', async () => {
-    vi.useFakeTimers();
-
-    const startPromise = recorder.startRecording();
-    await vi.advanceTimersByTimeAsync(3000);
+    await recorder.startRecording(stream);
 
     const result = await recorder.stopRecording();
 
     expect(result.waveformData).toBeInstanceOf(Array);
-
-    await startPromise;
-    vi.useRealTimers();
   });
 });
 

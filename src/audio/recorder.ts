@@ -7,21 +7,21 @@ export interface RecordingResult {
 }
 
 /**
- * Audio recorder for capturing microphone input
+ * Audio recorder for capturing microphone input using AudioWorklet
  * [EARS: MIC-001, MIC-002, MIC-003, MIC-004, REC-001 through REC-007, ERR-001, ERR-003]
  */
 export class Recorder {
   private selectedDeviceId: string | null = null;
   private hasPermissionGranted: boolean = false;
   private currentStream: MediaStream | null = null;
-  private countdownCallback: ((count: number) => void) | null = null;
   private recording: boolean = false;
-  private mediaRecorder: MediaRecorder | null = null;
-  private recordedChunks: Blob[] = [];
-  private recordingStartTime: number = 0;
-  private countdownTimeout: NodeJS.Timeout | null = null;
-  private countdownInterrupted: boolean = false;
+  private audioContext: AudioContext | null = null;
+  private recorderNode: AudioWorkletNode | null = null;
+  private sourceNode: MediaStreamAudioSourceNode | null = null;
   private recordingError: Error | null = null;
+  private recordedData: Float32Array[] | null = null;
+  private recordingSampleRate: number = 0;
+  private recordingDuration: number = 0;
 
   /**
    * Create a new Recorder
@@ -126,16 +126,6 @@ export class Recorder {
   }
 
   /**
-   * Set countdown callback
-   * [EARS: REC-002] Countdown callback for UI updates
-   *
-   * @param callback - Function to call with countdown values (3, 2, 1), or null to remove
-   */
-  setCountdownCallback(callback: ((count: number) => void) | null): void {
-    this.countdownCallback = callback;
-  }
-
-  /**
    * Check if currently recording
    *
    * @returns True if recording is active
@@ -145,66 +135,68 @@ export class Recorder {
   }
 
   /**
-   * Start recording with countdown
-   * [EARS: REC-002] 3-2-1 countdown before recording
-   * [EARS: REC-003] Start MediaRecorder after countdown
+   * Start recording immediately using AudioWorklet
+   * [EARS: REC-003] Start audio recording
+   * Note: Countdown is now handled by the UI component
    *
-   * @throws Error if microphone access not granted or already recording
+   * @param stream - MediaStream to record from
+   * @throws Error if already recording or stream not provided
    */
-  async startRecording(): Promise<void> {
-    if (!this.currentStream) {
-      throw new Error('Microphone access required before recording');
-    }
-
+  async startRecording(stream: MediaStream): Promise<void> {
     if (this.recording) {
       throw new Error('Already recording');
     }
 
-    this.countdownInterrupted = false;
-
-    // Run countdown: 3, 2, 1
-    for (let count = 3; count >= 1; count--) {
-      if (this.countdownInterrupted) {
-        return;
-      }
-
-      if (this.countdownCallback) {
-        this.countdownCallback(count);
-      }
-
-      await new Promise(resolve => {
-        this.countdownTimeout = setTimeout(resolve, 1000);
-      });
+    if (!stream) {
+      throw new Error('MediaStream required for recording');
     }
 
-    // Check if stopped during countdown
-    if (!this.currentStream || this.countdownInterrupted) {
-      return;
-    }
+    // Update current stream reference
+    this.currentStream = stream;
 
-    // Start recording
     try {
-      this.recordedChunks = [];
-      this.recordingError = null;
+      // Create AudioContext if not exists
+      if (!this.audioContext) {
+        this.audioContext = new AudioContext();
+      }
 
-      this.mediaRecorder = new MediaRecorder(this.currentStream, {
-        mimeType: 'audio/webm',
+      // Resume context if suspended (required in some browsers)
+      if (this.audioContext.state === 'suspended') {
+        await this.audioContext.resume();
+      }
+
+      // Load AudioWorklet processor module
+      try {
+        await this.audioContext.audioWorklet.addModule('/recorder-processor.js');
+      } catch (error) {
+        // Module might already be loaded, ignore error
+      }
+
+      // Create AudioWorklet node
+      this.recorderNode = new AudioWorkletNode(this.audioContext, 'recorder-processor');
+
+      // Create source from stream
+      this.sourceNode = this.audioContext.createMediaStreamSource(stream);
+
+      // Connect: source -> recorder node
+      this.sourceNode.connect(this.recorderNode);
+
+      // Set up message handler to receive recorded data
+      this.recorderNode.port.onmessage = (event) => {
+        const { samples, sampleRate, duration } = event.data;
+        this.recordedData = samples;
+        this.recordingSampleRate = sampleRate;
+        this.recordingDuration = duration;
+      };
+
+      // Start recording
+      this.recorderNode.port.postMessage({
+        command: 'start',
+        sampleRate: this.audioContext.sampleRate
       });
 
-      this.mediaRecorder.addEventListener('dataavailable', (event) => {
-        if (event.data.size > 0) {
-          this.recordedChunks.push(event.data);
-        }
-      });
-
-      this.mediaRecorder.addEventListener('error', () => {
-        this.recording = false;
-        this.recordingError = new Error('Recording failed');
-      });
-
-      this.mediaRecorder.start();
-      this.recordingStartTime = Date.now();
       this.recording = true;
+      this.recordingError = null;
     } catch (error) {
       this.recording = false;
       throw new Error('Failed to start recording');
@@ -220,66 +212,155 @@ export class Recorder {
    * @throws Error if encoding fails
    */
   async stopRecording(): Promise<RecordingResult> {
-    // Interrupt countdown if active
-    this.countdownInterrupted = true;
-
-    // Clear countdown timeout if active
-    if (this.countdownTimeout) {
-      clearTimeout(this.countdownTimeout);
-      this.countdownTimeout = null;
-    }
-
-    if (!this.recording || !this.mediaRecorder) {
+    if (!this.recording || !this.recorderNode) {
       // Not recording, return empty result
       return {
-        audioBlob: new Blob([], { type: 'audio/webm' }),
+        audioBlob: new Blob([], { type: 'audio/wav' }),
         duration: 0,
         waveformData: [],
       };
     }
 
     return new Promise((resolve, reject) => {
-      if (!this.mediaRecorder) {
-        reject(new Error('Recording failed'));
-        return;
-      }
-
-      this.mediaRecorder.addEventListener('stop', async () => {
+      // Wait for data from processor
+      const handleData = () => {
         try {
-          // Check if an error occurred during recording
-          if (this.recordingError) {
-            this.recording = false;
-            this.mediaRecorder = null;
-            this.recordedChunks = [];
-            reject(this.recordingError);
-            return;
+          if (!this.recordedData) {
+            throw new Error('No recorded data received');
           }
 
-          const duration = (Date.now() - this.recordingStartTime) / 1000;
+          // Convert Float32Array[] to WAV blob
+          const wavBlob = this.convertToWav(
+            this.recordedData,
+            this.recordingSampleRate
+          );
 
-          // Create audio blob with correct MIME type (WebM)
-          const audioBlob = new Blob(this.recordedChunks, { type: 'audio/webm' });
-
-          // Generate simple waveform data (placeholder)
-          const waveformData: number[] = [];
+          // Generate simple waveform data (sample every ~100 samples for visualization)
+          const waveformData = this.generateWaveformData(this.recordedData);
 
           this.recording = false;
-          this.mediaRecorder = null;
-          this.recordedChunks = [];
+
+          // Clean up
+          if (this.sourceNode) {
+            this.sourceNode.disconnect();
+            this.sourceNode = null;
+          }
+          if (this.recorderNode) {
+            this.recorderNode.disconnect();
+            this.recorderNode = null;
+          }
+
+          this.recordedData = null;
 
           resolve({
-            audioBlob,
-            duration,
+            audioBlob: wavBlob,
+            duration: this.recordingDuration,
             waveformData,
           });
         } catch (error) {
           this.recording = false;
           reject(new Error('Recording failed'));
         }
-      });
+      };
 
-      this.mediaRecorder.stop();
+      // Request stop and wait for data
+      if (this.recorderNode) {
+        this.recorderNode.port.postMessage({ command: 'stop' });
+
+        // Wait a bit for the data to arrive
+        setTimeout(() => {
+          handleData();
+        }, 100);
+      } else {
+        reject(new Error('Recording failed'));
+      }
     });
+  }
+
+  /**
+   * Convert Float32Array samples to WAV blob
+   * @private
+   */
+  private convertToWav(samples: Float32Array[], sampleRate: number): Blob {
+    // Flatten all sample arrays into one
+    const totalLength = samples.reduce((sum, arr) => sum + arr.length, 0);
+    const allSamples = new Float32Array(totalLength);
+    let offset = 0;
+    for (const chunk of samples) {
+      allSamples.set(chunk, offset);
+      offset += chunk.length;
+    }
+
+    // Convert Float32 (-1 to 1) to Int16 (-32768 to 32767)
+    const int16Data = new Int16Array(allSamples.length);
+    for (let i = 0; i < allSamples.length; i++) {
+      const s = Math.max(-1, Math.min(1, allSamples[i]));
+      int16Data[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+    }
+
+    // Create WAV file
+    const numChannels = 1; // Mono
+    const bitsPerSample = 16;
+    const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
+    const blockAlign = numChannels * (bitsPerSample / 8);
+    const dataSize = int16Data.length * 2;
+
+    const buffer = new ArrayBuffer(44 + dataSize);
+    const view = new DataView(buffer);
+
+    // Write WAV header
+    const writeString = (offset: number, string: string) => {
+      for (let i = 0; i < string.length; i++) {
+        view.setUint8(offset + i, string.charCodeAt(i));
+      }
+    };
+
+    writeString(0, 'RIFF');
+    view.setUint32(4, 36 + dataSize, true);
+    writeString(8, 'WAVE');
+    writeString(12, 'fmt ');
+    view.setUint32(16, 16, true); // fmt chunk size
+    view.setUint16(20, 1, true); // PCM format
+    view.setUint16(22, numChannels, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, byteRate, true);
+    view.setUint16(32, blockAlign, true);
+    view.setUint16(34, bitsPerSample, true);
+    writeString(36, 'data');
+    view.setUint32(40, dataSize, true);
+
+    // Write PCM data
+    const dataOffset = 44;
+    for (let i = 0; i < int16Data.length; i++) {
+      view.setInt16(dataOffset + i * 2, int16Data[i], true);
+    }
+
+    return new Blob([buffer], { type: 'audio/wav' });
+  }
+
+  /**
+   * Generate waveform data for visualization
+   * @private
+   */
+  private generateWaveformData(samples: Float32Array[]): number[] {
+    // Flatten samples
+    const totalLength = samples.reduce((sum, arr) => sum + arr.length, 0);
+    const allSamples = new Float32Array(totalLength);
+    let offset = 0;
+    for (const chunk of samples) {
+      allSamples.set(chunk, offset);
+      offset += chunk.length;
+    }
+
+    // Sample every ~100 samples for waveform visualization
+    const waveformData: number[] = [];
+    const step = Math.max(1, Math.floor(allSamples.length / 1000));
+
+    for (let i = 0; i < allSamples.length; i += step) {
+      waveformData.push(Math.abs(allSamples[i]));
+    }
+
+    return waveformData;
   }
 
   /**
@@ -287,16 +368,25 @@ export class Recorder {
    */
   dispose(): void {
     // Stop recording if active
-    if (this.recording && this.mediaRecorder) {
-      this.mediaRecorder.stop();
+    if (this.recording && this.recorderNode) {
+      this.recorderNode.port.postMessage({ command: 'stop' });
       this.recording = false;
-      this.mediaRecorder = null;
     }
 
-    // Clear countdown timeout
-    if (this.countdownTimeout) {
-      clearTimeout(this.countdownTimeout);
-      this.countdownTimeout = null;
+    // Disconnect nodes
+    if (this.sourceNode) {
+      this.sourceNode.disconnect();
+      this.sourceNode = null;
+    }
+    if (this.recorderNode) {
+      this.recorderNode.disconnect();
+      this.recorderNode = null;
+    }
+
+    // Close AudioContext
+    if (this.audioContext) {
+      this.audioContext.close();
+      this.audioContext = null;
     }
 
     if (this.currentStream) {
@@ -306,5 +396,6 @@ export class Recorder {
 
     this.hasPermissionGranted = false;
     this.selectedDeviceId = null;
+    this.recordedData = null;
   }
 }

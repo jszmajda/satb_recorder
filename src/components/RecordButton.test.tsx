@@ -135,7 +135,7 @@ describe('REC-001: Request microphone permission on Add Track', () => {
   });
 });
 
-describe('REC-002: Display countdown (3-2-1)', () => {
+describe('REC-002: Display countdown (5-4-3-2-1) synced to metronome', () => {
   let mockRecorder: any;
   let mockMetronome: any;
 
@@ -190,12 +190,12 @@ describe('REC-002: Display countdown (3-2-1)', () => {
 
     expect(mockRecorder.requestMicrophoneAccess).toHaveBeenCalled();
 
-    // Should show countdown value 3
-    expect(screen.getByText('3')).toBeInTheDocument();
+    // Should show countdown value 5
+    expect(screen.getByText('5')).toBeInTheDocument();
   });
 
-  test('countdown shows 3, 2, 1 in sequence', async () => {
-    renderWithProvider(<RecordButton voicePartId="soprano" onRecordingComplete={vi.fn()} />);
+  test('countdown shows 5, 4, 3, 2, 1 in sequence synced to BPM', async () => {
+    renderWithProvider(<RecordButton voicePartId="soprano" bpm={120} onRecordingComplete={vi.fn()} />);
 
     const button = screen.getByRole('button', { name: /record|add track/i });
 
@@ -204,23 +204,35 @@ describe('REC-002: Display countdown (3-2-1)', () => {
       await Promise.resolve();
     });
 
+    expect(screen.getByText('5')).toBeInTheDocument();
+
+    // Advance 1 beat (500ms at 120 BPM)
+    await act(async () => {
+      vi.advanceTimersByTime(500);
+    });
+    expect(screen.getByText('4')).toBeInTheDocument();
+
+    // Advance 1 beat
+    await act(async () => {
+      vi.advanceTimersByTime(500);
+    });
     expect(screen.getByText('3')).toBeInTheDocument();
 
-    // Advance 1 second
+    // Advance 1 beat
     await act(async () => {
-      vi.advanceTimersByTime(1000);
+      vi.advanceTimersByTime(500);
     });
     expect(screen.getByText('2')).toBeInTheDocument();
 
-    // Advance 1 second
+    // Advance 1 beat
     await act(async () => {
-      vi.advanceTimersByTime(1000);
+      vi.advanceTimersByTime(500);
     });
     expect(screen.getByText('1')).toBeInTheDocument();
   });
 
   test('starts recording after countdown completes', async () => {
-    renderWithProvider(<RecordButton voicePartId="soprano" onRecordingComplete={vi.fn()} />);
+    renderWithProvider(<RecordButton voicePartId="soprano" bpm={120} onRecordingComplete={vi.fn()} />);
 
     const button = screen.getByRole('button', { name: /record|add track/i });
 
@@ -231,9 +243,9 @@ describe('REC-002: Display countdown (3-2-1)', () => {
 
     expect(mockRecorder.requestMicrophoneAccess).toHaveBeenCalled();
 
-    // Wait for countdown (3 seconds)
+    // Wait for countdown (5 beats at 120 BPM = 5 * 500ms = 2500ms)
     await act(async () => {
-      vi.advanceTimersByTime(3000);
+      vi.advanceTimersByTime(2500);
       await Promise.resolve();
     });
 
@@ -448,9 +460,18 @@ describe('REC-004: Display VU meter during recording', () => {
 
     expect(mockRecorder.requestMicrophoneAccess).toHaveBeenCalled();
 
-    // Wait for countdown and first VU meter update interval (50ms)
+    // Wait for countdown (5 beats at 120 BPM = 2500ms)
     await act(async () => {
-      vi.advanceTimersByTime(3000 + 50);
+      vi.advanceTimersByTime(2500);
+      await Promise.resolve();
+      // Wait for async operations to complete (startRecording, AudioContext.resume)
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    // Wait for first VU meter update interval (50ms)
+    await act(async () => {
+      vi.advanceTimersByTime(50);
       await Promise.resolve();
     });
 
@@ -647,7 +668,7 @@ describe('RecordButton: Component states', () => {
       await Promise.resolve();
     });
 
-    expect(screen.getByText('3')).toBeInTheDocument();
+    expect(screen.getByText('5')).toBeInTheDocument();
     expect(button).toBeDisabled();
 
     vi.useRealTimers();

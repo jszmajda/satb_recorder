@@ -365,6 +365,33 @@ describe('EXP-005, EXP-006: MP3 export', () => {
     expect(mp3Blob.size).toBeGreaterThan(0);
   });
 
+  test('MP3 blob contains valid MP3 data (not WAV)', async () => {
+    const tracks: MockTrack[] = [
+      {
+        id: 'track-1',
+        audioBlob: new Blob(['audio 1'], { type: 'audio/wav' }),
+        volume: 100,
+        muted: false,
+        soloed: false,
+      },
+    ];
+
+    const mp3Blob = await exporter.exportMP3(tracks);
+    const arrayBuffer = await mp3Blob.arrayBuffer();
+    const bytes = new Uint8Array(arrayBuffer);
+
+    // Check that it's NOT a WAV file (WAV starts with 'RIFF')
+    const isWav = bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46;
+
+    // MP3 files can start with ID3 tag (0x49 0x44 0x33) or frame sync (0xFF 0xFB/0xFA)
+    const hasId3 = bytes[0] === 0x49 && bytes[1] === 0x44 && bytes[2] === 0x33;
+    const hasMp3Sync = bytes[0] === 0xFF && (bytes[1] === 0xFB || bytes[1] === 0xFA || bytes[1] === 0xF3 || bytes[1] === 0xF2);
+    const isMp3 = hasId3 || hasMp3Sync;
+
+    expect(isWav).toBe(false); // Should NOT be WAV
+    expect(isMp3).toBe(true);  // Should be MP3
+  });
+
   test('downloads MP3 with project name', async () => {
     const tracks: MockTrack[] = [
       {

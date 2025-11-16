@@ -310,19 +310,51 @@ beforeAll(() => {
         if (part instanceof ArrayBuffer) {
           return acc + part.byteLength;
         }
+        if (part instanceof Int8Array || part instanceof Uint8Array) {
+          return acc + part.byteLength;
+        }
         return acc + (part?.length || 0);
       }, 0) || 0;
       this.type = options?.type || '';
     }
 
     async arrayBuffer(): Promise<ArrayBuffer> {
-      // If parts contain an ArrayBuffer, return it
-      if (this.data.length > 0 && this.data[0] instanceof ArrayBuffer) {
-        return this.data[0];
+      // If parts contain typed arrays (like Int8Array from lamejs), combine them
+      if (this.data.length > 0) {
+        // Calculate total size
+        let totalSize = 0;
+        for (const part of this.data) {
+          if (part instanceof ArrayBuffer) {
+            totalSize += part.byteLength;
+          } else if (part instanceof Int8Array || part instanceof Uint8Array) {
+            totalSize += part.byteLength;
+          } else if (typeof part === 'string') {
+            totalSize += part.length;
+          }
+        }
+
+        // Create combined buffer
+        const buffer = new ArrayBuffer(totalSize);
+        const view = new Uint8Array(buffer);
+        let offset = 0;
+
+        for (const part of this.data) {
+          if (part instanceof ArrayBuffer) {
+            view.set(new Uint8Array(part), offset);
+            offset += part.byteLength;
+          } else if (part instanceof Int8Array) {
+            view.set(new Uint8Array(part.buffer, part.byteOffset, part.byteLength), offset);
+            offset += part.byteLength;
+          } else if (part instanceof Uint8Array) {
+            view.set(part, offset);
+            offset += part.byteLength;
+          }
+        }
+
+        return buffer;
       }
       // Return ArrayBuffer matching the blob size
-      // If size is 0, return empty buffer; otherwise use size or default to 1024
-      return new ArrayBuffer(this.size > 0 ? this.size : (this.size === 0 ? 0 : 1024));
+      return new ArrayBuffer(this.size > 0 ? this.size : 0);
     }
 
     slice(): Blob {
@@ -343,6 +375,22 @@ beforeAll(() => {
   }
 
   global.Blob = MockBlob as any;
+
+  // Mock lamejs (loaded globally in browser via script tag)
+  (global as any).window = (global as any).window || {};
+  (global as any).window.lamejs = {
+    Mp3Encoder: vi.fn().mockImplementation(function(channels: number, sampleRate: number, kbps: number) {
+      return {
+        encodeBuffer: vi.fn().mockReturnValue(
+          // Return MP3 frame sync bytes (0xFF 0xFB) followed by some data
+          new Int8Array([0xFF, 0xFB, 0x90, 0x00, 0x00, 0x00, 0x00, 0x00])
+        ),
+        flush: vi.fn().mockReturnValue(
+          new Int8Array([0xFF, 0xFB, 0x90, 0x00])
+        ),
+      };
+    }),
+  };
 
   // Mock HTMLCanvasElement.getContext
   HTMLCanvasElement.prototype.getContext = vi.fn().mockImplementation(function(this: HTMLCanvasElement, contextType: string) {

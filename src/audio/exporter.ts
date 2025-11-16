@@ -1,5 +1,17 @@
 // [EARS: EXP-001, EXP-002, EXP-003, EXP-004, EXP-005, EXP-006] Audio export to WAV and MP3
 
+// Declare global lamejs (loaded via script tag in index.html)
+declare global {
+  interface Window {
+    lamejs: {
+      Mp3Encoder: new (channels: number, sampleRate: number, kbps: number) => {
+        encodeBuffer(left: Int16Array, right?: Int16Array): Int8Array;
+        flush(): Int8Array;
+      };
+    };
+  }
+}
+
 export interface ExportTrack {
   id: string;
   audioBlob: Blob;
@@ -193,27 +205,47 @@ export class Exporter {
    *
    * @param buffer - Audio buffer to convert
    * @returns MP3 blob
-   *
-   * TODO: Implement actual MP3 encoding with lamejs
-   * For now, return WAV with MP3 type to unblock functionality
    */
   private audioBufferToMP3(buffer: AudioBuffer): Blob {
-    // Temporary: Convert to WAV format but mark as MP3
-    // This allows export functionality to work while we fix lamejs encoding
-    const numberOfChannels = buffer.numberOfChannels;
     const sampleRate = buffer.sampleRate;
-    const bitsPerSample = 16;
+    const kbps = 128;
+    const mp3encoder = new window.lamejs.Mp3Encoder(buffer.numberOfChannels, sampleRate, kbps);
 
-    // Interleave channels
-    const interleaved = this.interleaveChannels(buffer);
+    const mp3Data: Int8Array[] = [];
+    const sampleBlockSize = 1152; // LAME encoding block size
 
-    // Convert to 16-bit PCM
-    const pcmData = this.floatTo16BitPCM(interleaved);
+    if (buffer.numberOfChannels === 1) {
+      // Mono
+      const samples = this.floatTo16BitPCM(buffer.getChannelData(0));
+      for (let i = 0; i < samples.length; i += sampleBlockSize) {
+        const sampleChunk = samples.subarray(i, i + sampleBlockSize);
+        const mp3buf = mp3encoder.encodeBuffer(sampleChunk);
+        if (mp3buf.length > 0) {
+          mp3Data.push(mp3buf);
+        }
+      }
+    } else {
+      // Stereo
+      const left = this.floatTo16BitPCM(buffer.getChannelData(0));
+      const right = this.floatTo16BitPCM(buffer.getChannelData(1));
 
-    // Create WAV file (will be playable even with .mp3 extension)
-    const wavData = this.encodeWAV(pcmData, numberOfChannels, sampleRate, bitsPerSample);
+      for (let i = 0; i < left.length; i += sampleBlockSize) {
+        const leftChunk = left.subarray(i, i + sampleBlockSize);
+        const rightChunk = right.subarray(i, i + sampleBlockSize);
+        const mp3buf = mp3encoder.encodeBuffer(leftChunk, rightChunk);
+        if (mp3buf.length > 0) {
+          mp3Data.push(mp3buf);
+        }
+      }
+    }
 
-    return new Blob([wavData], { type: 'audio/mp3' });
+    // Flush encoder
+    const mp3buf = mp3encoder.flush();
+    if (mp3buf.length > 0) {
+      mp3Data.push(mp3buf);
+    }
+
+    return new Blob(mp3Data, { type: 'audio/mp3' });
   }
 
   /**

@@ -4,6 +4,7 @@
 import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { Mixer } from '../audio/mixer';
 import { useMetronome } from '../contexts/MetronomeContext';
+import { useMixer } from '../contexts/MixerContext';
 
 export interface PlaybackTrack {
   id: string;
@@ -64,7 +65,6 @@ export const PlaybackControls = forwardRef<PlaybackControlsHandle, PlaybackContr
   }, ref) {
   const [playState, setPlayState] = useState<PlayState>('stopped');
   const [internalCurrentTime, setInternalCurrentTime] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
 
   // Use external currentTime if provided, otherwise use internal state
   const currentTime = externalCurrentTime !== undefined ? externalCurrentTime : internalCurrentTime;
@@ -72,29 +72,24 @@ export const PlaybackControls = forwardRef<PlaybackControlsHandle, PlaybackContr
   // Get shared metronome instance from context
   const { getMetronome } = useMetronome();
 
-  const mixerRef = useRef<Mixer | null>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
+  // Get shared mixer, audio context, and loading state from context
+  const { getMixer, getAudioContext, isLoading, setIsLoading } = useMixer();
+  const mixer = getMixer();
+  const audioContext = getAudioContext();
+
   const intervalRef = useRef<number | null>(null);
   const loadedTrackIdsRef = useRef<Set<string>>(new Set());
   const lastInternalTimeRef = useRef<number>(0);
 
   /**
-   * Initialize mixer on mount
+   * Cleanup on unmount
    */
   useEffect(() => {
-    audioContextRef.current = new AudioContext();
-    mixerRef.current = new Mixer(audioContextRef.current);
-
     return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
       }
-      if (mixerRef.current) {
-        mixerRef.current.dispose();
-      }
-      if (audioContextRef.current) {
-        audioContextRef.current.close();
-      }
+      // Note: Don't dispose mixer or close audioContext - they're shared
       loadedTrackIdsRef.current.clear();
     };
   }, []);
@@ -105,7 +100,7 @@ export const PlaybackControls = forwardRef<PlaybackControlsHandle, PlaybackContr
    */
   useEffect(() => {
     const loadTracks = async () => {
-      if (!mixerRef.current) {
+      if (!mixer) {
         setIsLoading(false);
         return;
       }
@@ -118,7 +113,7 @@ export const PlaybackControls = forwardRef<PlaybackControlsHandle, PlaybackContr
       // Unload tracks that are no longer in the list
       const tracksToUnload = Array.from(loadedTrackIdsRef.current).filter(id => !currentTrackIds.has(id));
       for (const trackId of tracksToUnload) {
-        mixerRef.current.unloadTrack(trackId);
+        mixer.unloadTrack(trackId);
         loadedTrackIdsRef.current.delete(trackId);
       }
 
@@ -127,14 +122,14 @@ export const PlaybackControls = forwardRef<PlaybackControlsHandle, PlaybackContr
         try {
           // Only load if not already loaded (to avoid re-decoding audio)
           if (!loadedTrackIdsRef.current.has(track.id)) {
-            await mixerRef.current.loadTrack(track.id, track.audioBlob);
+            await mixer.loadTrack(track.id, track.audioBlob);
             loadedTrackIdsRef.current.add(track.id);
           }
 
           // Always update volume, mute, and solo state (cheap operations)
-          mixerRef.current.setVolume(track.id, track.volume);
-          mixerRef.current.setMuted(track.id, track.muted);
-          mixerRef.current.setSoloed(track.id, track.soloed);
+          mixer.setVolume(track.id, track.volume);
+          mixer.setMuted(track.id, track.muted);
+          mixer.setSoloed(track.id, track.soloed);
         } catch (error) {
           console.error(`Failed to load track ${track.id}:`, error);
         }
@@ -151,7 +146,7 @@ export const PlaybackControls = forwardRef<PlaybackControlsHandle, PlaybackContr
    * [EARS: SEEK-001, SEEK-002, SEEK-003] Seek mixer when currentTime changes externally
    */
   useEffect(() => {
-    if (!mixerRef.current) return;
+    if (!mixer) return;
 
     // Check if this is an external time change (not from our interval)
     const tolerance = 0.15; // Allow 150ms tolerance for interval updates
@@ -159,7 +154,7 @@ export const PlaybackControls = forwardRef<PlaybackControlsHandle, PlaybackContr
 
     if (timeDiff > tolerance) {
       // This is an external seek - update the mixer
-      mixerRef.current.seek(currentTime);
+      mixer.seek(currentTime);
       lastInternalTimeRef.current = currentTime;
     }
   }, [currentTime]);
@@ -169,8 +164,8 @@ export const PlaybackControls = forwardRef<PlaybackControlsHandle, PlaybackContr
    */
   useEffect(() => {
     const checkPlayState = () => {
-      if (mixerRef.current) {
-        const isPlaying = mixerRef.current.isPlaying();
+      if (mixer) {
+        const isPlaying = mixer.isPlaying();
         if (isPlaying && playState !== 'playing') {
           setPlayState('playing');
         } else if (!isPlaying && playState === 'playing') {
@@ -193,10 +188,10 @@ export const PlaybackControls = forwardRef<PlaybackControlsHandle, PlaybackContr
    * [EARS: PLAY-001] Start playback from current position
    */
   const handlePlay = () => {
-    if (!mixerRef.current) return;
+    if (!mixer) return;
 
     // [EARS: PLAY-006, PLAY-007, PLAY-008] Mixer handles mute/solo/sync logic
-    mixerRef.current.play();
+    mixer.play();
     setPlayState('playing');
 
     // Start metronome during playback
@@ -215,9 +210,9 @@ export const PlaybackControls = forwardRef<PlaybackControlsHandle, PlaybackContr
    * This allows resuming from the same position.
    */
   const handlePause = () => {
-    if (!mixerRef.current) return;
+    if (!mixer) return;
 
-    mixerRef.current.stop();
+    mixer.stop();
     setPlayState('paused');
 
     // Stop metronome when pausing
@@ -232,9 +227,10 @@ export const PlaybackControls = forwardRef<PlaybackControlsHandle, PlaybackContr
    * [EARS: PLAY-003, SEEK-002] Stop and reset playhead to 0:00
    */
   const handleStop = () => {
-    if (!mixerRef.current) return;
+    if (!mixer) return;
 
-    mixerRef.current.stop();
+    mixer.stop();
+    mixer.seek(0); // Reset playback position to start
     setPlayState('stopped');
 
     // Stop metronome when stopping

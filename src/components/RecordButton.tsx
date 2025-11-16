@@ -5,10 +5,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Recorder } from '../audio/recorder';
 import { VUMeter as VUMeterClass } from '../audio/vuMeter';
 import { VUMeter } from './VUMeter';
-import { Mixer } from '../audio/mixer';
 import { useErrorStore } from '../store/useErrorStore';
 import { useMicrophoneStore } from '../store/useMicrophoneStore';
 import { useMetronome } from '../contexts/MetronomeContext';
+import { useMixer } from '../contexts/MixerContext';
 
 export interface RecordButtonTrack {
   id: string;
@@ -55,10 +55,13 @@ export function RecordButton({
   // Get shared metronome instance from context
   const { getMetronome } = useMetronome();
 
+  // Get shared mixer, audio context, and loading state from context
+  const { getMixer, getAudioContext, isLoading } = useMixer();
+  const mixer = getMixer();
+  const audioContext = getAudioContext();
+
   const recorderRef = useRef<Recorder | null>(null);
   const vuMeterRef = useRef<VUMeterClass | null>(null);
-  const mixerRef = useRef<Mixer | null>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
   const vuIntervalRef = useRef<number | null>(null);
   const countdownIntervalRef = useRef<number | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -67,10 +70,10 @@ export function RecordButton({
    * Initialize audio components
    */
   useEffect(() => {
-    audioContextRef.current = new AudioContext();
+    if (!audioContext) return;
+
     recorderRef.current = new Recorder();
-    vuMeterRef.current = new VUMeterClass(audioContextRef.current);
-    mixerRef.current = new Mixer(audioContextRef.current);
+    vuMeterRef.current = new VUMeterClass(audioContext);
 
     return () => {
       if (vuIntervalRef.current) {
@@ -82,17 +85,12 @@ export function RecordButton({
       if (vuMeterRef.current) {
         vuMeterRef.current.disconnect();
       }
-      if (mixerRef.current) {
-        mixerRef.current.dispose();
-      }
       if (recorderRef.current) {
         recorderRef.current.dispose();
       }
-      if (audioContextRef.current) {
-        audioContextRef.current.close();
-      }
+      // Note: Don't dispose mixer or close audioContext - they're shared
     };
-  }, []);
+  }, [audioContext]);
 
   /**
    * Handle record button click
@@ -141,6 +139,8 @@ export function RecordButton({
       metronome.start();
     }
 
+    // Note: Tracks are already loaded in the shared mixer by PlaybackControls
+
     // Get current BPM from metronome instance for accurate countdown timing
     const currentBpm = metronome ? metronome.getBpm() : bpm;
     const beatIntervalMs = 60000 / currentBpm;
@@ -169,15 +169,32 @@ export function RecordButton({
 
     setRecordingState('recording');
 
-    // [EARS: REC-003] Start MediaRecorder IMMEDIATELY to avoid delay
-    // Note: Start recording first, then set up other features in parallel
+    // [EARS: REC-005, OVER-002] Start overdub playback FIRST
+    // Start playback before recording to compensate for audio output latency
+    if (overdubEnabled && mixer && tracks.length > 0 && audioContext) {
+      console.log('[RecordButton] Starting playback');
+      mixer.play();
+
+      // Wait for audio latency to compensate for output delay
+      // This ensures what you hear is in sync with what's being recorded
+      const baseLatency = audioContext.baseLatency || 0;
+      const outputLatency = (audioContext as any).outputLatency || 0;
+      const totalLatency = baseLatency + outputLatency;
+
+      if (totalLatency > 0) {
+        console.log(`[RecordButton] Compensating for ${(totalLatency * 1000).toFixed(1)}ms audio latency`);
+        await new Promise(resolve => setTimeout(resolve, totalLatency * 1000));
+      }
+    }
+
+    // [EARS: REC-003] Start MediaRecorder after latency compensation
     await recorderRef.current.startRecording(streamRef.current);
 
     // [EARS: REC-004] Connect VU meter to stream (in parallel with recording)
-    if (vuMeterRef.current && audioContextRef.current) {
+    if (vuMeterRef.current && audioContext) {
       // Resume AudioContext before connecting analyser (required in modern browsers)
-      if (audioContextRef.current.state === 'suspended') {
-        await audioContextRef.current.resume();
+      if (audioContext.state === 'suspended') {
+        await audioContext.resume();
       }
 
       vuMeterRef.current.connect(streamRef.current);
@@ -189,28 +206,6 @@ export function RecordButton({
           setVuLevel(vuMeterRef.current.getVolume());
         }
       }, 50);
-    }
-
-    // [EARS: REC-005, OVER-002] Load and play overdub tracks in background (don't block recording)
-    if (overdubEnabled && mixerRef.current && tracks.length > 0) {
-      // Load tracks asynchronously without blocking
-      (async () => {
-        try {
-          // Load all tracks into mixer
-          for (const track of tracks) {
-            await mixerRef.current!.loadTrack(track.id, track.audioBlob);
-            // Set track volume, mute, and solo states
-            mixerRef.current!.setVolume(track.id, track.volume);
-            mixerRef.current!.setMuted(track.id, track.muted);
-            mixerRef.current!.setSoloed(track.id, track.soloed);
-          }
-          // Start playback
-          mixerRef.current!.play();
-        } catch (error) {
-          console.error('Failed to load/play overdub tracks:', error);
-          // Continue recording even if overdub playback fails
-        }
-      })();
     }
 
     // Note: Metronome already started during countdown (see startCountdown())
@@ -236,8 +231,10 @@ export function RecordButton({
     }
 
     // [EARS: REC-005, OVER-002] Stop mixer if overdub was enabled
-    if (mixerRef.current) {
-      mixerRef.current.stop();
+    if (mixer) {
+      mixer.stop();
+      mixer.seek(0); // Reset playback position to start
+      // Note: Don't unload tracks - PlaybackControls manages the mixer's track state
     }
 
     // Stop metronome
@@ -284,16 +281,18 @@ export function RecordButton({
         <button
           onClick={handleRecordClick}
           aria-label="Record track"
+          disabled={isLoading}
           style={{
             padding: '0.3rem 0.5rem',
-            backgroundColor: '#f44336',
+            backgroundColor: isLoading ? '#999' : '#f44336',
             color: '#fff',
             border: 'none',
             borderRadius: '3px',
-            cursor: 'pointer',
+            cursor: isLoading ? 'not-allowed' : 'pointer',
             fontSize: '0.7rem',
             fontWeight: 'bold',
             minWidth: '45px',
+            opacity: isLoading ? 0.6 : 1,
           }}
         >
           Rec
@@ -344,7 +343,9 @@ export function RecordButton({
           minWidth: '100px',
         }}
       >
-        {recordingState === 'countdown'
+        {isLoading
+          ? 'Loading tracks...'
+          : recordingState === 'countdown'
           ? 'Get ready...'
           : recordingState === 'recording'
           ? 'Recording...'

@@ -17,15 +17,21 @@ const mockAudioContext = {
 
 global.AudioContext = vi.fn(() => mockAudioContext) as any;
 
-// Mock useMixer
+// Create stateful mock mixer
+let mockIsPlaying = false;
 const mockMixer = {
-  play: vi.fn(),
-  stop: vi.fn(),
+  play: vi.fn(() => {
+    mockIsPlaying = true;
+  }),
+  stop: vi.fn(() => {
+    mockIsPlaying = false;
+  }),
   dispose: vi.fn(),
   getCurrentTime: vi.fn().mockReturnValue(0),
   seek: vi.fn(),
-  isPlaying: vi.fn().mockReturnValue(false),
+  isPlaying: vi.fn(() => mockIsPlaying),
   loadTracks: vi.fn(),
+  loadTrack: vi.fn().mockResolvedValue(undefined),
 };
 
 vi.mock('../contexts/MixerContext', () => ({
@@ -52,6 +58,11 @@ const renderWithProvider = (component: React.ReactElement) => {
     </MetronomeProvider>
   );
 };
+
+beforeEach(() => {
+  mockIsPlaying = false;
+  vi.clearAllMocks();
+});
 
 describe('REC-001: Request microphone permission on Add Track', () => {
   let mockRecorder: any;
@@ -789,7 +800,6 @@ describe('REC-005, OVER-002: Overdub muting logic', () => {
   let mockRecorder: any;
   let mockMetronome: any;
   let mockVUMeter: any;
-  let mockMixer: any;
 
   beforeEach(() => {
     const mockStream = {
@@ -822,13 +832,6 @@ describe('REC-005, OVER-002: Overdub muting logic', () => {
       getVolume: vi.fn().mockReturnValue(0.5),
     };
 
-    mockMixer = {
-      loadTrack: vi.fn().mockResolvedValue(undefined),
-      play: vi.fn(),
-      stop: vi.fn(),
-      dispose: vi.fn(),
-    };
-
     vi.mocked(Recorder).mockImplementation(function() {
       return mockRecorder;
     } as any);
@@ -838,13 +841,6 @@ describe('REC-005, OVER-002: Overdub muting logic', () => {
     vi.mocked(VUMeter).mockImplementation(function() {
       return mockVUMeter;
     } as any);
-    vi.mocked(Mixer).mockImplementation(function() {
-      return mockMixer;
-    } as any);
-  });
-
-  afterEach(() => {
-    vi.clearAllMocks();
   });
 
   test('does not play tracks when overdub is disabled', async () => {
@@ -920,8 +916,7 @@ describe('REC-005, OVER-002: Overdub muting logic', () => {
       await Promise.resolve();
     });
 
-    // Mixer should load track and play when overdub is enabled
-    expect(mockMixer.loadTrack).toHaveBeenCalledWith('track-1', mockTracks[0].audioBlob);
+    // Mixer should play when overdub is enabled (tracks loaded separately)
     expect(mockMixer.play).toHaveBeenCalled();
 
     vi.useRealTimers();

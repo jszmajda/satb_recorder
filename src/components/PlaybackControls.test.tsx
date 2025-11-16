@@ -14,14 +14,19 @@ const mockAudioContext = {
 
 global.AudioContext = vi.fn(() => mockAudioContext) as any;
 
-// Mock useMixer
+// Create stateful mock mixer
+let mockIsPlaying = false;
 const mockMixer = {
-  play: vi.fn(),
-  stop: vi.fn(),
+  play: vi.fn(() => {
+    mockIsPlaying = true;
+  }),
+  stop: vi.fn(() => {
+    mockIsPlaying = false;
+  }),
   dispose: vi.fn(),
   getCurrentTime: vi.fn().mockReturnValue(0),
   seek: vi.fn(),
-  isPlaying: vi.fn().mockReturnValue(false),
+  isPlaying: vi.fn(() => mockIsPlaying),
   loadTracks: vi.fn(),
 };
 
@@ -48,26 +53,16 @@ const renderWithProvider = (component: React.ReactElement) => {
   );
 };
 
+beforeEach(() => {
+  mockIsPlaying = false;
+  vi.clearAllMocks();
+});
+
 describe('PLAY-001: Start playback from current playhead position', () => {
-  let mockMixer: any;
-
   beforeEach(() => {
-    mockMixer = {
-      play: vi.fn(),
-      stop: vi.fn(),
-      isPlaying: vi.fn().mockReturnValue(false),
-      loadTrack: vi.fn().mockResolvedValue(undefined),
-      getTrackIds: vi.fn().mockReturnValue([]),
-      dispose: vi.fn(),
-    };
-
     vi.mocked(Mixer).mockImplementation(function() {
-      return mockMixer;
+      return mockMixer as any;
     } as any);
-  });
-
-  afterEach(() => {
-    vi.clearAllMocks();
   });
 
   // ✅ Happy path
@@ -82,12 +77,10 @@ describe('PLAY-001: Start playback from current playhead position', () => {
 
   test('changes play button to pause button when playing', async () => {
     vi.useFakeTimers();
-    mockMixer.isPlaying.mockReturnValue(false);
 
     const { rerender } = renderWithProvider(<PlaybackControls />);
 
     const playButton = screen.getByRole('button', { name: /play/i });
-    mockMixer.isPlaying.mockReturnValue(true);
 
     await act(async () => {
       fireEvent.click(playButton);
@@ -108,8 +101,6 @@ describe('PLAY-001: Start playback from current playhead position', () => {
   });
 
   test('starts playback when stopped', () => {
-    mockMixer.isPlaying.mockReturnValue(false);
-
     renderWithProvider(<PlaybackControls />);
 
     const playButton = screen.getByRole('button', { name: /play/i });
@@ -120,36 +111,22 @@ describe('PLAY-001: Start playback from current playhead position', () => {
 });
 
 describe('PLAY-002: Pause playback and maintain playhead position', () => {
-  let mockMixer: any;
-
   beforeEach(() => {
-    mockMixer = {
-      play: vi.fn(),
-      stop: vi.fn(),
-      isPlaying: vi.fn().mockReturnValue(true),
-      loadTrack: vi.fn().mockResolvedValue(undefined),
-      getTrackIds: vi.fn().mockReturnValue([]),
-      dispose: vi.fn(),
-    };
-
     vi.mocked(Mixer).mockImplementation(function() {
-      return mockMixer;
+      return mockMixer as any;
     } as any);
-  });
-
-  afterEach(() => {
-    vi.clearAllMocks();
   });
 
   // ✅ Happy path
   test('calls mixer.stop() when Pause button clicked', async () => {
     vi.useFakeTimers();
-    mockMixer.isPlaying.mockReturnValue(true);
 
     const { rerender } = renderWithProvider(<PlaybackControls />);
 
-    // Let state sync happen
+    // Start playing first
+    const playButton = screen.getByRole('button', { name: /play/i });
     await act(async () => {
+      fireEvent.click(playButton);
       vi.advanceTimersByTime(50);
       await Promise.resolve();
     });
@@ -172,12 +149,13 @@ describe('PLAY-002: Pause playback and maintain playhead position', () => {
 
   test('changes pause button back to play button when paused', async () => {
     vi.useFakeTimers();
-    mockMixer.isPlaying.mockReturnValue(true);
 
     const { rerender } = renderWithProvider(<PlaybackControls />);
 
-    // Let state sync happen
+    // Start playing first
+    const playButton = screen.getByRole('button', { name: /play/i });
     await act(async () => {
+      fireEvent.click(playButton);
       vi.advanceTimersByTime(50);
       await Promise.resolve();
     });
@@ -189,7 +167,6 @@ describe('PLAY-002: Pause playback and maintain playhead position', () => {
     );
 
     const pauseButton = screen.getByRole('button', { name: /pause/i });
-    mockMixer.isPlaying.mockReturnValue(false);
 
     await act(async () => {
       fireEvent.click(pauseButton);
@@ -210,25 +187,10 @@ describe('PLAY-002: Pause playback and maintain playhead position', () => {
 });
 
 describe('PLAY-003: Stop playback and reset playhead to 0:00', () => {
-  let mockMixer: any;
-
   beforeEach(() => {
-    mockMixer = {
-      play: vi.fn(),
-      stop: vi.fn(),
-      isPlaying: vi.fn().mockReturnValue(true),
-      loadTrack: vi.fn().mockResolvedValue(undefined),
-      getTrackIds: vi.fn().mockReturnValue([]),
-      dispose: vi.fn(),
-    };
-
     vi.mocked(Mixer).mockImplementation(function() {
-      return mockMixer;
+      return mockMixer as any;
     } as any);
-  });
-
-  afterEach(() => {
-    vi.clearAllMocks();
   });
 
   // ✅ Happy path
@@ -253,12 +215,13 @@ describe('PLAY-003: Stop playback and reset playhead to 0:00', () => {
 
   test('changes to stopped state when stop clicked', async () => {
     vi.useFakeTimers();
-    mockMixer.isPlaying.mockReturnValue(true);
 
     const { rerender } = renderWithProvider(<PlaybackControls />);
 
-    // Let state sync happen
+    // Start playing first
+    const playButton = screen.getByRole('button', { name: /play/i });
     await act(async () => {
+      fireEvent.click(playButton);
       vi.advanceTimersByTime(50);
       await Promise.resolve();
     });
@@ -270,7 +233,6 @@ describe('PLAY-003: Stop playback and reset playhead to 0:00', () => {
     );
 
     const stopButton = screen.getByRole('button', { name: /stop/i });
-    mockMixer.isPlaying.mockReturnValue(false);
 
     await act(async () => {
       fireEvent.click(stopButton);
@@ -291,38 +253,22 @@ describe('PLAY-003: Stop playback and reset playhead to 0:00', () => {
 });
 
 describe('PLAY-004: Update playhead visual in real-time', () => {
-  let mockMixer: any;
-
   beforeEach(() => {
     vi.useFakeTimers();
-
-    mockMixer = {
-      play: vi.fn(),
-      stop: vi.fn(),
-      isPlaying: vi.fn().mockReturnValue(false),
-      loadTrack: vi.fn().mockResolvedValue(undefined),
-      getTrackIds: vi.fn().mockReturnValue([]),
-      dispose: vi.fn(),
-    };
-
     vi.mocked(Mixer).mockImplementation(function() {
-      return mockMixer;
+      return mockMixer as any;
     } as any);
   });
 
   afterEach(() => {
     vi.useRealTimers();
-    vi.clearAllMocks();
   });
 
   // ✅ Happy path
   test('updates playhead time while playing', async () => {
-    mockMixer.isPlaying.mockReturnValue(false);
-
     const { rerender } = renderWithProvider(<PlaybackControls />);
 
     const playButton = screen.getByRole('button', { name: /play/i });
-    mockMixer.isPlaying.mockReturnValue(true);
 
     await act(async () => {
       fireEvent.click(playButton);
@@ -354,25 +300,10 @@ describe('PLAY-004: Update playhead visual in real-time', () => {
 });
 
 describe('PLAY-005: Display elapsed time and total duration', () => {
-  let mockMixer: any;
-
   beforeEach(() => {
-    mockMixer = {
-      play: vi.fn(),
-      stop: vi.fn(),
-      isPlaying: vi.fn().mockReturnValue(false),
-      loadTrack: vi.fn().mockResolvedValue(undefined),
-      getTrackIds: vi.fn().mockReturnValue([]),
-      dispose: vi.fn(),
-    };
-
     vi.mocked(Mixer).mockImplementation(function() {
-      return mockMixer;
+      return mockMixer as any;
     } as any);
-  });
-
-  afterEach(() => {
-    vi.clearAllMocks();
   });
 
   // ✅ Happy path
@@ -398,27 +329,10 @@ describe('PLAY-005: Display elapsed time and total duration', () => {
 });
 
 describe('PLAY-006, PLAY-007, PLAY-008: Mixer integration', () => {
-  let mockMixer: any;
-
   beforeEach(() => {
-    mockMixer = {
-      play: vi.fn(),
-      stop: vi.fn(),
-      isPlaying: vi.fn().mockReturnValue(false),
-      setMuted: vi.fn(),
-      setSoloed: vi.fn(),
-      loadTrack: vi.fn().mockResolvedValue(undefined),
-      getTrackIds: vi.fn().mockReturnValue(['track1', 'track2']),
-      dispose: vi.fn(),
-    };
-
     vi.mocked(Mixer).mockImplementation(function() {
-      return mockMixer;
+      return mockMixer as any;
     } as any);
-  });
-
-  afterEach(() => {
-    vi.clearAllMocks();
   });
 
   // ✅ Happy path
@@ -454,44 +368,38 @@ describe('PLAY-006, PLAY-007, PLAY-008: Mixer integration', () => {
 });
 
 describe('PlaybackControls: Component lifecycle', () => {
-  let mockMixer: any;
-
   beforeEach(() => {
-    mockMixer = {
-      play: vi.fn(),
-      stop: vi.fn(),
-      isPlaying: vi.fn().mockReturnValue(false),
-      loadTrack: vi.fn().mockResolvedValue(undefined),
-      getTrackIds: vi.fn().mockReturnValue([]),
-      dispose: vi.fn(),
-    };
-
     vi.mocked(Mixer).mockImplementation(function() {
-      return mockMixer;
+      return mockMixer as any;
     } as any);
   });
 
-  afterEach(() => {
-    vi.clearAllMocks();
-  });
-
-  test('creates mixer on mount', () => {
+  test('gets mixer from context on mount', () => {
     renderWithProvider(<PlaybackControls />);
-    expect(Mixer).toHaveBeenCalledWith(expect.any(Object));
+    // Component uses shared mixer from MixerContext
+    // Verify component renders without errors
+    expect(screen.getByRole('button', { name: /play/i })).toBeInTheDocument();
   });
 
-  test('disposes mixer on unmount', () => {
+  test('cleans up on unmount without disposing shared mixer', () => {
     const { unmount } = renderWithProvider(<PlaybackControls />);
     unmount();
-    expect(mockMixer.dispose).toHaveBeenCalled();
+    // Shared mixer should NOT be disposed (it's shared across components)
+    expect(mockMixer.dispose).not.toHaveBeenCalled();
   });
 
-  test('cleans up playback interval on unmount', () => {
+  test('cleans up playback interval on unmount', async () => {
     vi.useFakeTimers();
 
-    mockMixer.isPlaying.mockReturnValue(true);
-
     const { unmount } = renderWithProvider(<PlaybackControls />);
+
+    // Start playing
+    const playButton = screen.getByRole('button', { name: /play/i });
+    await act(async () => {
+      fireEvent.click(playButton);
+      vi.advanceTimersByTime(50);
+      await Promise.resolve();
+    });
 
     unmount();
 

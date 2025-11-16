@@ -6,6 +6,36 @@ import { useProjectStore } from '../store/useProjectStore';
 // Mock the project store
 vi.mock('../store/useProjectStore');
 
+// Mock AudioContext
+const mockAudioContext = {
+  close: vi.fn(),
+  createGain: vi.fn(),
+  destination: {},
+  decodeAudioData: vi.fn(),
+};
+
+// Mock useMixer
+const mockMixer = {
+  play: vi.fn(),
+  stop: vi.fn(),
+  dispose: vi.fn(),
+  getCurrentTime: vi.fn().mockReturnValue(0),
+  seek: vi.fn(),
+  isPlaying: vi.fn().mockReturnValue(false),
+  loadTracks: vi.fn(),
+};
+
+vi.mock('../contexts/MixerContext', () => ({
+  useMixer: () => ({
+    getMixer: () => mockMixer,
+    getAudioContext: () => mockAudioContext,
+    isLoading: false,
+    setIsLoading: vi.fn(),
+  }),
+}));
+
+global.AudioContext = vi.fn(() => mockAudioContext) as any;
+
 describe('PROJ-009: Project name display', () => {
   beforeEach(() => {
     vi.mocked(useProjectStore).mockReturnValue({

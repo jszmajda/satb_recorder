@@ -14,6 +14,26 @@ const mockAudioContext = {
   decodeAudioData: vi.fn(),
 };
 
+// Mock useMixer
+const mockMixer = {
+  play: vi.fn(),
+  stop: vi.fn(),
+  dispose: vi.fn(),
+  getCurrentTime: vi.fn().mockReturnValue(0),
+  seek: vi.fn(),
+  isPlaying: vi.fn().mockReturnValue(false),
+  loadTracks: vi.fn(),
+};
+
+vi.mock('../contexts/MixerContext', () => ({
+  useMixer: () => ({
+    getMixer: () => mockMixer,
+    getAudioContext: () => mockAudioContext,
+    isLoading: false,
+    setIsLoading: vi.fn(),
+  }),
+}));
+
 global.AudioContext = vi.fn(() => mockAudioContext) as any;
 
 // Mock Mixer class

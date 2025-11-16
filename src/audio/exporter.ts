@@ -193,21 +193,27 @@ export class Exporter {
    *
    * @param buffer - Audio buffer to convert
    * @returns MP3 blob
+   *
+   * TODO: Implement actual MP3 encoding with lamejs
+   * For now, return WAV with MP3 type to unblock functionality
    */
   private audioBufferToMP3(buffer: AudioBuffer): Blob {
-    // For now, create a simple MP3 blob
-    // In production, this would use lamejs or similar library
-    // For testing purposes, we'll create a blob with MP3 mime type
+    // Temporary: Convert to WAV format but mark as MP3
+    // This allows export functionality to work while we fix lamejs encoding
+    const numberOfChannels = buffer.numberOfChannels;
+    const sampleRate = buffer.sampleRate;
+    const bitsPerSample = 16;
 
     // Interleave channels
     const interleaved = this.interleaveChannels(buffer);
 
-    // Convert to 16-bit PCM (MP3 encoder would use this)
+    // Convert to 16-bit PCM
     const pcmData = this.floatTo16BitPCM(interleaved);
 
-    // In production: const mp3Data = this.encodeMP3(pcmData, buffer.sampleRate, 128);
-    // For now: return a blob with MP3 type (simplified for testing)
-    return new Blob([pcmData], { type: 'audio/mp3' });
+    // Create WAV file (will be playable even with .mp3 extension)
+    const wavData = this.encodeWAV(pcmData, numberOfChannels, sampleRate, bitsPerSample);
+
+    return new Blob([wavData], { type: 'audio/mp3' });
   }
 
   /**

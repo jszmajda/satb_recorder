@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useProjectStore } from '../store/useProjectStore';
 import { Exporter, type ExportTrack } from '../audio/exporter';
+import { useMixer } from '../contexts/MixerContext';
 
 export function TopBar() {
   const {
@@ -14,6 +15,9 @@ export function TopBar() {
     deleteProject,
     getAllProjects,
   } = useProjectStore();
+
+  // Get shared audio context from MixerContext
+  const { getAudioContext } = useMixer();
 
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState('');
@@ -103,7 +107,9 @@ export function TopBar() {
   const handleExportWAV = async () => {
     if (!currentProject || tracks.length === 0) return;
 
-    const audioContext = new AudioContext();
+    const audioContext = getAudioContext();
+    if (!audioContext) return;
+
     const exporter = new Exporter(audioContext);
 
     const exportTracks: ExportTrack[] = tracks.map(track => ({
@@ -116,7 +122,7 @@ export function TopBar() {
 
     await exporter.downloadWAV(exportTracks, currentProject.name);
     exporter.dispose();
-    audioContext.close();
+    // Note: Don't close audioContext - it's shared
     setShowExportDropdown(false);
   };
 
@@ -127,7 +133,9 @@ export function TopBar() {
   const handleExportMP3 = async () => {
     if (!currentProject || tracks.length === 0) return;
 
-    const audioContext = new AudioContext();
+    const audioContext = getAudioContext();
+    if (!audioContext) return;
+
     const exporter = new Exporter(audioContext);
 
     const exportTracks: ExportTrack[] = tracks.map(track => ({
@@ -140,7 +148,7 @@ export function TopBar() {
 
     await exporter.downloadMP3(exportTracks, currentProject.name);
     exporter.dispose();
-    audioContext.close();
+    // Note: Don't close audioContext - it's shared
     setShowExportDropdown(false);
   };
 
